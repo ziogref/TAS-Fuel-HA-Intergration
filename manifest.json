@@ -2,7 +2,7 @@
   "domain": "tas_fuel_prices",
   "name": "Tasmanian Fuel Prices",
   "documentation": "https://github.com/ziogref/TAS-Fuel-HA-Intergration",
-  "issue_tracker": "https://github.com/ziogref/TAS-Fuel-HA-Intergrationissues",
+  "issue_tracker": "https://github.com/ziogref/TAS-Fuel-HA-Intergration/issues",
   "codeowners": ["@ziogref"],
   "requirements": [],
   "config_flow": true,

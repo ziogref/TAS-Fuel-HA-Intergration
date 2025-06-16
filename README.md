@@ -24,7 +24,7 @@ It provides sensors for the cheapest fuel stations based on your selected fuel t
 1. Open HACS in your Home Assistant instance.  
 2. Go to **Integrations**.  
 3. Click the three dots in the top right corner and select **Custom repositories**.  
-4. In the "Repository" field, paste the URL to your GitHub repository.  
+4. In the "Repository" field, paste the following URL: https://github.com/ziogref/TAS-Fuel-HA-Intergration  
 5. For "Category", select **Integration**.  
 6. Click **Add**.  
 7. The "Tasmanian Fuel Prices" integration will now appear in your HACS integrations list. Click on it and then click **Download**.  
