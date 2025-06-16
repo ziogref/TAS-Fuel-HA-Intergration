@@ -1,0 +1,6 @@
+{
+  "name": "Tasmanian Fuel Prices",
+  "content_in_root": false,
+  "render_readme": true,
+  "domains": ["sensor"]
+}
