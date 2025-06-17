@@ -3,15 +3,15 @@
     "step": {
       "user": {
         "title": "Tasmanian Fuel Prices: Authentication",
-        "description": "Please enter your Client ID and Client Secret from the NSW FuelCheck API portal.",
+        "description": "Please enter your API Key and Secret from the NSW FuelCheck API portal.",
         "data": {
-          "client_id": "Client ID",
-          "client_secret": "Client Secret"
+          "client_id": "API Key",
+          "client_secret": "API Secret"
         }
       }
     },
     "error": {
-      "auth_error": "Invalid authentication credentials. Please check your Client ID and Secret and try again.",
+      "auth_error": "Invalid authentication credentials. Please check your API Key and Secret and try again.",
       "unknown_error": "An unknown error occurred. Please check the logs for more details."
     },
     "abort": {
