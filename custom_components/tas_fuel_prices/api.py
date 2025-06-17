@@ -39,31 +39,31 @@ class TasFuelAPI:
 
         LOGGER.info("Requesting new access token.")
         data = {"grant_type": "client_credentials"}
-        # Changed Content-Type to application/json as requested
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
         try:
-            # Changed from 'data=data' to 'json=data' to match the new Content-Type
             response = await self._session.post(
                 OAUTH_URL,
-                json=data,
+                data=data,
                 auth=aiohttp.BasicAuth(self._client_id, self._client_secret),
                 headers=headers,
             )
             response.raise_for_status()
             
-            try:
-                # The server might send the wrong content-type, so we ignore it
-                token_data = await response.json(content_type=None)
-            except json.JSONDecodeError as err:
-                # If parsing as JSON fails, log the raw text to see what the server sent
-                response_text = await response.text()
+            token_data = await response.json(content_type=None)
+
+            # --- Start of the fix ---
+            # Check if the access_token key exists before trying to access it.
+            if "access_token" not in token_data:
+                # If the key is missing, the API likely returned an error in the JSON body.
+                # Log the entire response to see what the error is.
                 LOGGER.error(
-                    "Failed to decode JSON from token endpoint. The server responded with: %s",
-                    response_text,
+                    "API returned a successful response, but no 'access_token' was found. Response: %s",
+                    token_data,
                 )
-                # Re-raise the error to ensure the process stops correctly
-                raise err
+                # Raise a specific error to stop the process.
+                raise KeyError("'access_token' not found in API response.")
+            # --- End of the fix ---
 
             self._access_token = token_data["access_token"]
             expiry_seconds = int(token_data.get("expires_in", 43199))
@@ -73,7 +73,6 @@ class TasFuelAPI:
             return self._access_token
 
         except ClientResponseError as err:
-            # Also log the response text for HTTP errors for more context
             response_text = await response.text()
             LOGGER.error(
                 "API Error getting token. Status: %s, Response: %s",
