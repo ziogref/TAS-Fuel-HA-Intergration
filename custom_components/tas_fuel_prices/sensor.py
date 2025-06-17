@@ -32,47 +32,52 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     
+    # Wait for the first refresh to complete
+    await coordinator.async_refresh()
+    
     # Get options
     fuel_type = entry.options.get(CONF_FUEL_TYPE, "U91")
     favourite_stations = entry.options.get(CONF_STATIONS, [])
 
-    # Create sensor entities
     sensors: list[SensorEntity] = []
 
-    # Process data to find cheapest stations and favourite stations
-    all_stations_map = {station['code']: station for station in coordinator.data.get('stations', {}).get('items', [])}
-    all_prices = coordinator.data.get('prices', {}).get('items', [])
+    if coordinator.data:
+        # Corrected parsing: The API returns a list directly under 'stations' and 'prices'
+        all_stations = coordinator.data.get('stations', [])
+        all_prices = coordinator.data.get('prices', [])
+        
+        all_stations_map = {station['code']: station for station in all_stations}
 
-    # Filter prices for the selected fuel type
-    relevant_prices = [p for p in all_prices if p.get('fueltype') == fuel_type]
+        # Filter prices for the selected fuel type
+        relevant_prices = [p for p in all_prices if p.get('fueltype') == fuel_type]
 
-    # Create sensors for the 5 cheapest stations
-    cheapest_prices = sorted(relevant_prices, key=lambda x: x.get('price', 999))[:5]
-    for i, price_info in enumerate(cheapest_prices):
-        station_code = price_info.get('stationcode')
-        if station_code in all_stations_map:
-            sensors.append(
-                TasFuelPriceSensor(
-                    coordinator,
-                    f"Cheapest {fuel_type} {i+1}",
-                    station_code,
-                    fuel_type,
-                    unique_id_suffix=f"cheapest_{i+1}"
+        # Create sensors for the 5 cheapest stations
+        cheapest_prices = sorted(relevant_prices, key=lambda x: x.get('price', 999))[:5]
+        for i, price_info in enumerate(cheapest_prices):
+            station_code = price_info.get('stationcode')
+            if station_code in all_stations_map:
+                sensors.append(
+                    TasFuelPriceSensor(
+                        coordinator,
+                        f"Cheapest {fuel_type} {i+1}",
+                        station_code,
+                        fuel_type,
+                        unique_id_suffix=f"cheapest_{i+1}"
+                    )
                 )
-            )
 
-    # Create sensors for favourite stations
-    for station_code in favourite_stations:
-        if station_code in all_stations_map:
-            sensors.append(
-                TasFuelPriceSensor(
-                    coordinator,
-                    f"Favourite {all_stations_map[station_code].get('name', station_code)}",
-                    station_code,
-                    fuel_type,
-                    unique_id_suffix=f"fav_{station_code}"
+        # Create sensors for favourite stations
+        for station_code in favourite_stations:
+            if station_code in all_stations_map:
+                sensors.append(
+                    TasFuelPriceSensor(
+                        coordinator,
+                        f"Favourite {all_stations_map[station_code].get('name', station_code)}",
+                        station_code,
+                        fuel_type,
+                        unique_id_suffix=f"fav_{station_code}"
+                    )
                 )
-            )
 
     async_add_entities(sensors)
 
@@ -95,6 +100,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self._attr_name = name
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{unique_id_suffix}"
         self._attr_icon = "mdi:gas-station"
+        # Price is in cents, but we display in dollars, so unit should be $/L
         self._attr_native_unit_of_measurement = "AUD/L"
         self._update_state()
 
@@ -106,11 +112,13 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
 
     def _update_state(self) -> None:
         """Update the state and attributes of the sensor."""
-        if self.coordinator.data is None:
+        if not self.coordinator.data:
+            self._attr_native_value = None
             return
             
-        all_stations_map = {station['code']: station for station in self.coordinator.data.get('stations', {}).get('items', [])}
-        all_prices = self.coordinator.data.get('prices', {}).get('items', [])
+        # Corrected parsing
+        all_stations_map = {station['code']: station for station in self.coordinator.data.get('stations', [])}
+        all_prices = self.coordinator.data.get('prices', [])
 
         station_info = all_stations_map.get(self._station_code)
         price_info = next(
@@ -122,9 +130,9 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             None,
         )
 
-        if station_info and price_info:
-            # Price is in cents, convert to dollars
-            self._attr_native_value = price_info.get('price') / 100
+        if station_info and price_info and price_info.get('price') is not None:
+            # Price is in cents from the API, convert to dollars for display
+            self._attr_native_value = round(price_info.get('price') / 100.0, 3)
             self._attr_extra_state_attributes = {
                 ATTR_STATION_ID: self._station_code,
                 ATTR_BRAND: station_info.get("brand"),
@@ -137,5 +145,5 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             self._attr_extra_state_attributes = {
                 ATTR_STATION_ID: self._station_code,
                 ATTR_FUEL_TYPE: self._fuel_type,
+                "error": "Price not available for this station and fuel type",
             }
-
