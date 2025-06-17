@@ -1,10 +1,11 @@
 """API client for the Tasmanian Fuel Prices integration."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import backoff
 import aiohttp
 import json
+import uuid
 
 from aiohttp import ClientError, ClientSession, ClientResponseError
 
@@ -86,10 +87,10 @@ class TasFuelAPI:
         """
         token = await self._get_access_token()
         
-        # Create all required headers for the price fetch endpoint
-        transaction_id = f"HA-{int(datetime.now().timestamp())}"
-        # Format the timestamp as required by the API documentation
-        request_timestamp = datetime.utcnow().strftime('%d/%m/%Y %I:%M:%S %p')
+        # Generate the required headers for the prices endpoint
+        transaction_id = str(uuid.uuid4())
+        # Use the modern, timezone-aware way to get UTC time
+        request_timestamp = datetime.now(UTC).strftime('%d/%m/%Y %I:%M:%S %p')
 
         headers = {
             "Authorization": f"Bearer {token}",
@@ -104,15 +105,14 @@ class TasFuelAPI:
         
         try:
             LOGGER.debug("Fetching all fuel prices for TAS from API.")
-            # This is a GET request, not a POST
+            # This is a GET request
             response = await self._session.get(
                 API_BASE_URL,
                 params=params,
                 headers=headers,
             )
             response.raise_for_status()
-            data = await response.json()
-            # The full data set includes reference data, which is what we need.
+            data = await response.json(content_type=None)
             LOGGER.debug("Successfully fetched all fuel prices.")
             return data
 
