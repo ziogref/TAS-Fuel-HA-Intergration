@@ -3,6 +3,7 @@
 import asyncio
 from datetime import datetime, timedelta
 import backoff
+import aiohttp
 
 from aiohttp import ClientError, ClientSession, ClientResponseError
 
