@@ -2,11 +2,19 @@
   "config": {
     "step": {
       "user": {
-        "title": "Tasmanian Fuel Prices: Authentication",
+        "title": "Tasmanian Fuel Prices: Authentication (Step 1/2)",
         "description": "Please enter your API Key and Secret from the NSW FuelCheck API portal.",
         "data": {
           "client_id": "API Key",
           "client_secret": "API Secret"
+        }
+      },
+      "options": {
+        "title": "Tasmanian Fuel Prices: Options (Step 2/2)",
+        "description": "Configure your preferred fuel type and favourite stations.",
+        "data": {
+          "fuel_type": "Fuel Type",
+          "stations": "Favourite Stations (up to 5, comma-separated codes)"
         }
       }
     },
@@ -22,7 +30,7 @@
     "step": {
       "init": {
         "title": "Tasmanian Fuel Prices: Options",
-        "description": "Configure your preferred fuel type and favourite stations.",
+        "description": "Re-configure your preferred fuel type and favourite stations.",
         "data": {
           "fuel_type": "Fuel Type",
           "stations": "Favourite Stations (up to 5, comma-separated codes)"
