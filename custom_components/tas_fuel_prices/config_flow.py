@@ -28,7 +28,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
     VERSION = 1
-    data: dict[str, Any]
+    data: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -50,7 +50,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown_error"
             else:
                 # Auth is valid, store the data and proceed to the options step
-                self.data = user_input
+                self.data.update(user_input)
                 return await self.async_step_options()
 
         # Show the form to the user
@@ -99,7 +99,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlowHandler(OptionsFlow):
-    """Handle a options flow for re-configuring."""
+    """Handle an options flow for re-configuring."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow."""
