@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime, timedelta
 import backoff
 import aiohttp
+import json
 
 from aiohttp import ClientError, ClientSession, ClientResponseError
 
@@ -37,23 +38,32 @@ class TasFuelAPI:
             return self._access_token
 
         LOGGER.info("Requesting new access token.")
-        # Data should be sent in the body, not as URL params
         data = {"grant_type": "client_credentials"}
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
         try:
             response = await self._session.post(
                 OAUTH_URL,
-                data=data, # Use 'data' to send form data in the body
+                data=data,
                 auth=aiohttp.BasicAuth(self._client_id, self._client_secret),
                 headers=headers,
             )
             response.raise_for_status()
-            # The server sends the wrong content-type, so we ignore it during parsing
-            token_data = await response.json(content_type=None)
             
+            try:
+                # The server might send the wrong content-type, so we ignore it
+                token_data = await response.json(content_type=None)
+            except json.JSONDecodeError as err:
+                # If parsing as JSON fails, log the raw text to see what the server sent
+                response_text = await response.text()
+                LOGGER.error(
+                    "Failed to decode JSON from token endpoint. The server responded with: %s",
+                    response_text,
+                )
+                # Re-raise the error to ensure the process stops correctly
+                raise err
+
             self._access_token = token_data["access_token"]
-            # The token expires in 43199 seconds (12 hours). We'll be safe and refresh a bit earlier.
             expiry_seconds = int(token_data.get("expires_in", 43199))
             self._token_expiry = datetime.now() + timedelta(seconds=expiry_seconds - 60)
             
@@ -61,7 +71,13 @@ class TasFuelAPI:
             return self._access_token
 
         except ClientResponseError as err:
-            LOGGER.error("API Error getting token: %s", err)
+            # Also log the response text for HTTP errors for more context
+            response_text = await response.text()
+            LOGGER.error(
+                "API Error getting token. Status: %s, Response: %s",
+                err.status,
+                response_text,
+            )
             raise
         except Exception as err:
             LOGGER.error("Unexpected error getting token: %s", err)
@@ -76,10 +92,8 @@ class TasFuelAPI:
         token = await self._get_access_token()
         headers = {**API_HEADERS, "Authorization": f"Bearer {token}"}
         
-        # The API requires a unique transactionId for each request.
-        # We also add ReferenceData=True to get the full station list.
         request_body = {
-            "fueltype": "All", # Fetch all types, we will filter later
+            "fueltype": "All",
             "brand": "All",
             "namedlocation": "All",
             "sortby": "price",
@@ -101,10 +115,9 @@ class TasFuelAPI:
             return data
 
         except ClientResponseError as err:
-            # If the token is invalid, the API returns a 401
             if err.status == 401:
                 LOGGER.warning("Access token rejected, requesting a new one.")
-                self._access_token = None # Force a new token on next call
+                self._access_token = None
             raise
         except Exception as err:
             LOGGER.error("Unexpected error fetching prices: %s", err)
