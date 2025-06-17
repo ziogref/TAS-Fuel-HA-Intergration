@@ -39,12 +39,14 @@ class TasFuelAPI:
 
         LOGGER.info("Requesting new access token.")
         data = {"grant_type": "client_credentials"}
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        # Changed Content-Type to application/json as requested
+        headers = {"Content-Type": "application/json"}
 
         try:
+            # Changed from 'data=data' to 'json=data' to match the new Content-Type
             response = await self._session.post(
                 OAUTH_URL,
-                data=data,
+                json=data,
                 auth=aiohttp.BasicAuth(self._client_id, self._client_secret),
                 headers=headers,
             )
