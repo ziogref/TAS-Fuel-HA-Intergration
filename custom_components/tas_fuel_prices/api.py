@@ -38,32 +38,32 @@ class TasFuelAPI:
             return self._access_token
 
         LOGGER.info("Requesting new access token.")
-        data = {"grant_type": "client_credentials"}
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        
+        # According to the documentation, this is a GET request.
+        # The grant_type is a URL parameter.
+        params = {"grant_type": "client_credentials"}
+        
+        # The client_id and client_secret are sent in the Authorization header,
+        # Base64 encoded, which is handled by aiohttp's BasicAuth.
+        auth = aiohttp.BasicAuth(self._client_id, self._client_secret)
 
         try:
-            response = await self._session.post(
+            # Use a GET request as specified in the Swagger documentation.
+            response = await self._session.get(
                 OAUTH_URL,
-                data=data,
-                auth=aiohttp.BasicAuth(self._client_id, self._client_secret),
-                headers=headers,
+                params=params,
+                auth=auth
             )
             response.raise_for_status()
             
             token_data = await response.json(content_type=None)
 
-            # --- Start of the fix ---
-            # Check if the access_token key exists before trying to access it.
             if "access_token" not in token_data:
-                # If the key is missing, the API likely returned an error in the JSON body.
-                # Log the entire response to see what the error is.
                 LOGGER.error(
                     "API returned a successful response, but no 'access_token' was found. Response: %s",
                     token_data,
                 )
-                # Raise a specific error to stop the process.
                 raise KeyError("'access_token' not found in API response.")
-            # --- End of the fix ---
 
             self._access_token = token_data["access_token"]
             expiry_seconds = int(token_data.get("expires_in", 43199))
@@ -93,6 +93,7 @@ class TasFuelAPI:
         token = await self._get_access_token()
         headers = {**API_HEADERS, "Authorization": f"Bearer {token}"}
         
+        # This is a POST request as per the documentation for fetching prices.
         request_body = {
             "fueltype": "All",
             "brand": "All",
