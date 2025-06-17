@@ -39,16 +39,10 @@ class TasFuelAPI:
 
         LOGGER.info("Requesting new access token.")
         
-        # According to the documentation, this is a GET request.
-        # The grant_type is a URL parameter.
         params = {"grant_type": "client_credentials"}
-        
-        # The client_id and client_secret are sent in the Authorization header,
-        # Base64 encoded, which is handled by aiohttp's BasicAuth.
         auth = aiohttp.BasicAuth(self._client_id, self._client_secret)
 
         try:
-            # Use a GET request as specified in the Swagger documentation.
             response = await self._session.get(
                 OAUTH_URL,
                 params=params,
@@ -91,34 +85,40 @@ class TasFuelAPI:
         This function handles token retrieval and renewal automatically.
         """
         token = await self._get_access_token()
-        headers = {**API_HEADERS, "Authorization": f"Bearer {token}"}
         
-        # This is a POST request as per the documentation for fetching prices.
-        request_body = {
-            "fueltype": "All",
-            "brand": "All",
-            "namedlocation": "All",
-            "sortby": "price",
-            "sortascending": "true",
-            "transactionId": f"HA-{int(datetime.now().timestamp())}",
-            "ReferenceData": "True"
+        # Create all required headers for the price fetch endpoint
+        transaction_id = f"HA-{int(datetime.now().timestamp())}"
+        # Format the timestamp as required by the API documentation
+        request_timestamp = datetime.utcnow().strftime('%d/%m/%Y %I:%M:%S %p')
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json; charset=utf-8",
+            "apikey": self._client_id,
+            "transactionid": transaction_id,
+            "requesttimestamp": request_timestamp,
         }
 
+        # Parameters for the GET request to fetch all prices for Tasmania
+        params = {"states": "TAS"}
+        
         try:
-            LOGGER.debug("Fetching fuel prices from API.")
-            response = await self._session.post(
+            LOGGER.debug("Fetching all fuel prices for TAS from API.")
+            # This is a GET request, not a POST
+            response = await self._session.get(
                 API_BASE_URL,
-                json=request_body,
+                params=params,
                 headers=headers,
             )
             response.raise_for_status()
             data = await response.json()
-            LOGGER.debug("Successfully fetched fuel prices.")
+            # The full data set includes reference data, which is what we need.
+            LOGGER.debug("Successfully fetched all fuel prices.")
             return data
 
         except ClientResponseError as err:
             if err.status == 401:
-                LOGGER.warning("Access token rejected, requesting a new one.")
+                LOGGER.warning("Access token rejected by prices endpoint, forcing refresh.")
                 self._access_token = None
             raise
         except Exception as err:
