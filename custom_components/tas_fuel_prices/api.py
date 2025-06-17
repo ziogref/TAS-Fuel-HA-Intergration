@@ -37,22 +37,24 @@ class TasFuelAPI:
             return self._access_token
 
         LOGGER.info("Requesting new access token.")
-        params = {"grant_type": "client_credentials"}
+        # Data should be sent in the body, not as URL params
+        data = {"grant_type": "client_credentials"}
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
         try:
             response = await self._session.post(
                 OAUTH_URL,
-                params=params,
+                data=data, # Use 'data' to send form data in the body
                 auth=aiohttp.BasicAuth(self._client_id, self._client_secret),
                 headers=headers,
             )
             response.raise_for_status()
-            data = await response.json()
+            # The server sends the wrong content-type, so we ignore it during parsing
+            token_data = await response.json(content_type=None)
             
-            self._access_token = data["access_token"]
+            self._access_token = token_data["access_token"]
             # The token expires in 43199 seconds (12 hours). We'll be safe and refresh a bit earlier.
-            expiry_seconds = int(data.get("expires_in", 43199))
+            expiry_seconds = int(token_data.get("expires_in", 43199))
             self._token_expiry = datetime.now() + timedelta(seconds=expiry_seconds - 60)
             
             LOGGER.info("Successfully obtained new access token.")
