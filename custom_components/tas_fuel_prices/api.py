@@ -45,7 +45,7 @@ class TasFuelAPI:
         Retrieve a new OAuth2 access token from the API.
         The token is valid for 12 hours.
         """
-        if self._access_token and self._token_expiry and self._token_expiry > datetime.now():
+        if self._access_token and self._token_expiry and self._token_expiry > datetime.now(UTC):
             LOGGER.debug("Using existing, valid access token.")
             return self._access_token
 
@@ -73,7 +73,8 @@ class TasFuelAPI:
 
             self._access_token = token_data["access_token"]
             expiry_seconds = int(token_data.get("expires_in", 43199))
-            self._token_expiry = datetime.now() + timedelta(seconds=expiry_seconds - 60)
+            # Set expiry time using a timezone-aware datetime object
+            self._token_expiry = datetime.now(UTC) + timedelta(seconds=expiry_seconds - 60)
             
             LOGGER.info("Successfully obtained new access token.")
             return self._access_token
