@@ -191,8 +191,8 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
         self._api_client = api_client
         self._attr_name = "Access Token Expiry"
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_token_expiry"
-        # By removing the device class, HA will display the full timestamp string
-        # self._attr_device_class = SensorDeviceClass.TIMESTAMP
+        # Restore the device class to allow Home Assistant to handle timezone conversion
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
     def device_info(self) -> DeviceInfo:
