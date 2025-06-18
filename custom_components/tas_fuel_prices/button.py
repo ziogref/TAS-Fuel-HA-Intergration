@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from homeassistant.components.button import (
     ButtonEntity,
     ButtonEntityDescription,
-    ButtonDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -69,6 +68,7 @@ class TasFuelDiagnosticButton(ButtonEntity):
         self.coordinator = coordinator
         self._api_client = api_client
         self.entity_description = description
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{description.key}"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -76,11 +76,6 @@ class TasFuelDiagnosticButton(ButtonEntity):
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
         )
-
-    @property
-    def unique_id(self) -> str:
-        """Return the unique ID for this button."""
-        return f"{self.coordinator.config_entry.entry_id}_{self.entity_description.key}"
 
     async def async_press(self) -> None:
         """Handle the button press."""
