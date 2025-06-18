@@ -28,6 +28,11 @@ class TasFuelAPI:
         self._access_token: str | None = None
         self._token_expiry: datetime | None = None
 
+    @property
+    def token_expiry(self) -> datetime | None:
+        """Return the access token's expiry time."""
+        return self._token_expiry
+
     @backoff.on_exception(backoff.expo, ClientResponseError, max_tries=3, logger=LOGGER)
     async def _get_access_token(self) -> str:
         """

@@ -35,7 +35,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    # Store both the coordinator and the api client for access by sensors
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+        "api": api,
+    }
     
     # Create the device entry
     device_registry = dr.async_get(hass)
@@ -44,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name="Tasmanian Fuel Prices",
         manufacturer="ziogref",
-        model="v1.0.3",
+        model="v1.0.4", # Updated model/version
     )
 
     # Set up options listener
