@@ -40,7 +40,7 @@ async def async_setup_entry(
     coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
     
-    await coordinator.async_refresh()
+    # The first refresh is already handled in __init__.py, no need to do it again here.
     
     fuel_type = entry.options.get(CONF_FUEL_TYPE, "U91")
     favourite_stations = entry.options.get(CONF_STATIONS, [])
@@ -188,7 +188,5 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        # This will be called after a successful data fetch, and we can tell Home Assistant
-        # to re-read our sensor's state, which will now have the correct expiry time.
         self.async_write_ha_state()
 
