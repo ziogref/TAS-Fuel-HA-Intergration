@@ -13,8 +13,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     DOMAIN,
     LOGGER,
-    CONF_CLIENT_ID,
-    CONF_CLIENT_SECRET,
+    CONF_API_KEY,
+    CONF_API_SECRET,
     CONF_FUEL_TYPE,
     CONF_STATIONS,
 )
@@ -27,7 +27,7 @@ FUEL_TYPES = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LPG"]
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
-    VERSION = 2  # <-- BUMPED VERSION TO FORCE A REFRESH
+    VERSION = 2
     data: dict[str, Any] = {}
 
     async def async_step_user(
@@ -38,7 +38,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             session = async_get_clientsession(self.hass)
             api = TasFuelAPI(
-                user_input[CONF_CLIENT_ID], user_input[CONF_CLIENT_SECRET], session
+                user_input[CONF_API_KEY], user_input[CONF_API_SECRET], session
             )
             try:
                 # Test credentials by fetching a token
@@ -56,8 +56,8 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         # Show the form to the user
         schema = vol.Schema(
             {
-                vol.Required(CONF_CLIENT_ID): str,
-                vol.Required(CONF_CLIENT_SECRET): str,
+                vol.Required(CONF_API_KEY): str,
+                vol.Required(CONF_API_SECRET): str,
             }
         )
         return self.async_show_form(

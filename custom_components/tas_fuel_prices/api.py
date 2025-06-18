@@ -9,7 +9,7 @@ import uuid
 
 from aiohttp import ClientError, ClientSession, ClientResponseError
 
-from .const import API_BASE_URL, API_HEADERS, OAUTH_URL, LOGGER
+from .const import API_BASE_URL, API_HEADERS, OAUTH_URL, LOGGER, CONF_API_KEY
 
 
 class TasFuelAPI:
@@ -17,13 +17,13 @@ class TasFuelAPI:
 
     def __init__(
         self,
-        client_id: str,
-        client_secret: str,
+        api_key: str,
+        api_secret: str,
         session: ClientSession,
     ) -> None:
         """Initialize the API client."""
-        self._client_id = client_id
-        self._client_secret = client_secret
+        self._api_key = api_key
+        self._api_secret = api_secret
         self._session = session
         self._access_token: str | None = None
         self._token_expiry: datetime | None = None
@@ -41,7 +41,7 @@ class TasFuelAPI:
         LOGGER.info("Requesting new access token.")
         
         params = {"grant_type": "client_credentials"}
-        auth = aiohttp.BasicAuth(self._client_id, self._client_secret)
+        auth = aiohttp.BasicAuth(self._api_key, self._api_secret)
 
         try:
             response = await self._session.get(
@@ -87,25 +87,21 @@ class TasFuelAPI:
         """
         token = await self._get_access_token()
         
-        # Generate the required headers for the prices endpoint
         transaction_id = str(uuid.uuid4())
-        # Use the modern, timezone-aware way to get UTC time
         request_timestamp = datetime.now(UTC).strftime('%d/%m/%Y %I:%M:%S %p')
 
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json; charset=utf-8",
-            "apikey": self._client_id,
+            "apikey": self._api_key,
             "transactionid": transaction_id,
             "requesttimestamp": request_timestamp,
         }
 
-        # Parameters for the GET request to fetch all prices for Tasmania
         params = {"states": "TAS"}
         
         try:
             LOGGER.debug("Fetching all fuel prices for TAS from API.")
-            # This is a GET request
             response = await self._session.get(
                 API_BASE_URL,
                 params=params,

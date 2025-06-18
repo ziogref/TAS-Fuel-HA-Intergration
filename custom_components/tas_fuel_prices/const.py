@@ -1,7 +1,8 @@
 """Constants for the Tasmanian Fuel Prices integration."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, UTC
 from logging import Logger, getLogger
+import uuid
 
 LOGGER: Logger = getLogger(__package__)
 
@@ -23,9 +24,9 @@ API_HEADERS = {
     "Content-Type": "application/json; charset=utf-8",
 }
 
-# Configuration Defaults
-CONF_CLIENT_ID = "client_id"
-CONF_CLIENT_SECRET = "client_secret"
+# Configuration Defaults - RENAMED
+CONF_API_KEY = "api_key"
+CONF_API_SECRET = "api_secret"
 CONF_FUEL_TYPE = "fuel_type"
 CONF_STATIONS = "stations"
 

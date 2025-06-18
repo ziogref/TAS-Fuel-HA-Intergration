@@ -8,7 +8,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import TasFuelAPI
-from .const import DOMAIN, LOGGER, SCAN_INTERVAL, CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from .const import DOMAIN, LOGGER, SCAN_INTERVAL, CONF_API_KEY, CONF_API_SECRET
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -19,8 +19,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     session = async_get_clientsession(hass)
     api = TasFuelAPI(
-        entry.data[CONF_CLIENT_ID],
-        entry.data[CONF_CLIENT_SECRET],
+        entry.data[CONF_API_KEY],
+        entry.data[CONF_API_SECRET],
         session,
     )
 
@@ -54,4 +54,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(entry.entry_id)
-
+    
