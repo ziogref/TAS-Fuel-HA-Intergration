@@ -1,6 +1,7 @@
 """Sensor platform for Tasmanian Fuel Prices."""
 from __future__ import annotations
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -43,8 +44,8 @@ async def async_setup_entry(
 
     sensors: list[SensorEntity] = []
 
-    # Add the diagnostic sensor for token expiry
-    sensors.append(TasFuelTokenExpirySensor(coordinator, api_client))
+    # Add the diagnostic sensor for token expiry, passing the HA timezone to it
+    sensors.append(TasFuelTokenExpirySensor(coordinator, api_client, hass.config.time_zone))
 
     if coordinator.data:
         # The API returns a list directly under 'stations' and 'prices'
@@ -185,14 +186,14 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: DataUpdateCoordinator, api_client: TasFuelAPI) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, api_client: TasFuelAPI, time_zone: ZoneInfo) -> None:
         """Initialize the diagnostic sensor."""
         super().__init__(coordinator)
         self._api_client = api_client
+        self._time_zone = time_zone
         self._attr_name = "Access Token Expiry"
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_token_expiry"
-        # By removing the device class, HA will display the full timestamp string
-        # self._attr_device_class = SensorDeviceClass.TIMESTAMP
+        # We are providing a formatted string, so we must not set a device_class.
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -202,9 +203,17 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
         )
 
     @property
-    def native_value(self) -> datetime | None:
-        """Return the state of the sensor."""
-        return self._api_client.token_expiry
+    def native_value(self) -> str | None:
+        """Return the state of the sensor as a formatted string."""
+        expiry_time = self._api_client.token_expiry
+        if expiry_time is None:
+            return None
+        
+        # Convert the UTC datetime object to the local timezone of the Home Assistant instance
+        local_time = expiry_time.astimezone(self._time_zone)
+        
+        # Format the local time into the desired string format
+        return local_time.strftime('%Y-%m-%d %H:%M:%S')
 
     @callback
     def _handle_coordinator_update(self) -> None:
