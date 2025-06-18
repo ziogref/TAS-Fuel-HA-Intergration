@@ -1,7 +1,12 @@
 """Button platform for Tasmanian Fuel Prices."""
 from __future__ import annotations
+from dataclasses import dataclass
 
-from homeassistant.components.button import ButtonEntity, ButtonDeviceClass
+from homeassistant.components.button import (
+    ButtonEntity,
+    ButtonEntityDescription,
+    ButtonDeviceClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -12,6 +17,22 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .api import TasFuelAPI
 from .const import DOMAIN
 
+@dataclass(frozen=True, kw_only=True)
+class TasFuelButtonEntityDescription(ButtonEntityDescription):
+    """Describes a Tasmanian Fuel Prices button entity."""
+
+BUTTONS: tuple[TasFuelButtonEntityDescription, ...] = (
+    TasFuelButtonEntityDescription(
+        key="force_price_refresh",
+        name="Force Fuel Price Refresh",
+        icon="mdi:update",
+    ),
+    TasFuelButtonEntityDescription(
+        key="force_token_refresh",
+        name="Force Access Token Refresh",
+        icon="mdi:key-variant",
+    ),
+)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -23,11 +44,14 @@ async def async_setup_entry(
     coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
 
-    buttons = [
-        TasFuelForcePriceFetchButton(coordinator),
-        TasFuelForceTokenRefreshButton(coordinator, api_client),
-    ]
-    async_add_entities(buttons)
+    async_add_entities(
+        TasFuelDiagnosticButton(
+            coordinator=coordinator,
+            api_client=api_client,
+            description=description,
+        )
+        for description in BUTTONS
+    )
 
 
 class TasFuelDiagnosticButton(ButtonEntity):
@@ -35,9 +59,16 @@ class TasFuelDiagnosticButton(ButtonEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: DataUpdateCoordinator) -> None:
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        api_client: TasFuelAPI,
+        description: TasFuelButtonEntityDescription,
+    ) -> None:
         """Initialize the button."""
         self.coordinator = coordinator
+        self._api_client = api_client
+        self.entity_description = description
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -51,33 +82,10 @@ class TasFuelDiagnosticButton(ButtonEntity):
         """Return the unique ID for this button."""
         return f"{self.coordinator.config_entry.entry_id}_{self.entity_description.key}"
 
-
-class TasFuelForcePriceFetchButton(TasFuelDiagnosticButton):
-    """Button to force a refresh of the fuel price data."""
-    entity_description = ButtonEntity.entity_description.fget(ButtonEntity)
-    entity_description.key = "force_price_refresh"
-    entity_description.name = "Force Fuel Price Refresh"
-    entity_description.icon = "mdi:update"
-
     async def async_press(self) -> None:
         """Handle the button press."""
-        await self.coordinator.async_request_refresh()
-
-
-class TasFuelForceTokenRefreshButton(TasFuelDiagnosticButton):
-    """Button to force a refresh of the API access token."""
-    entity_description = ButtonEntity.entity_description.fget(ButtonEntity)
-    entity_description.key = "force_token_refresh"
-    entity_description.name = "Force Access Token Refresh"
-    entity_description.icon = "mdi:key-variant"
-
-    def __init__(self, coordinator: DataUpdateCoordinator, api_client: TasFuelAPI) -> None:
-        """Initialize the button."""
-        super().__init__(coordinator)
-        self._api_client = api_client
-
-    async def async_press(self) -> None:
-        """Handle the button press."""
-        self._api_client.force_token_refresh()
-        # After forcing the token refresh, also trigger a data update to use the new token
-        await self.coordinator.async_request_refresh()
+        if self.entity_description.key == "force_price_refresh":
+            await self.coordinator.async_request_refresh()
+        elif self.entity_description.key == "force_token_refresh":
+            self._api_client.force_token_refresh()
+            await self.coordinator.async_request_refresh()
