@@ -33,6 +33,12 @@ class TasFuelAPI:
         """Return the access token's expiry time."""
         return self._token_expiry
 
+    def force_token_refresh(self) -> None:
+        """Force the access token to be refreshed on the next call."""
+        LOGGER.info("Forcing a refresh of the access token on the next update.")
+        self._access_token = None
+        self._token_expiry = None
+
     @backoff.on_exception(backoff.expo, ClientResponseError, max_tries=3, logger=LOGGER)
     async def _get_access_token(self) -> str:
         """

@@ -11,7 +11,7 @@ from homeassistant.helpers import device_registry as dr
 from .api import TasFuelAPI
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL, CONF_API_KEY, CONF_API_SECRET
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -48,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name="Tasmanian Fuel Prices",
         manufacturer="ziogref",
-        model="v1.0.4", # Updated model/version
+        model="v1.0.5", # Updated model/version
     )
 
     # Set up options listener

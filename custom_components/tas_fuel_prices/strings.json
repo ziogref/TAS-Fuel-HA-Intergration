@@ -5,8 +5,8 @@
         "title": "Tasmanian Fuel Prices: Authentication (Step 1/2)",
         "description": "Please enter your API Key and Secret from the NSW FuelCheck API portal.",
         "data": {
-          "api_key": "API Key",
-          "api_secret": "API Secret"
+          "client_id": "API Key",
+          "client_secret": "API Secret"
         }
       },
       "options": {

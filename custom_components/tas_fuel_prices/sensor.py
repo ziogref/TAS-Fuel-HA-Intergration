@@ -1,13 +1,7 @@
 """Sensor platform for Tasmanian Fuel Prices."""
 from __future__ import annotations
 from datetime import datetime
-from datetime import datetime
 
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorEntityDescription,
-    SensorDeviceClass,
-)
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
@@ -16,7 +10,6 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -24,7 +17,6 @@ from homeassistant.helpers.update_coordinator import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from .api import TasFuelAPI
 from .api import TasFuelAPI
 from .const import (
     DOMAIN,
@@ -47,9 +39,6 @@ async def async_setup_entry(
     data_bundle = hass.data[DOMAIN][entry.entry_id]
     coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
-    data_bundle = hass.data[DOMAIN][entry.entry_id]
-    coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
-    api_client: TasFuelAPI = data_bundle["api"]
     
     await coordinator.async_refresh()
     
@@ -57,9 +46,6 @@ async def async_setup_entry(
     favourite_stations = entry.options.get(CONF_STATIONS, [])
 
     sensors: list[SensorEntity] = []
-
-    # Add the diagnostic sensor for token expiry
-    sensors.append(TasFuelTokenExpirySensor(coordinator, api_client))
 
     # Add the diagnostic sensor for token expiry
     sensors.append(TasFuelTokenExpirySensor(coordinator, api_client))
@@ -105,7 +91,6 @@ async def async_setup_entry(
 
 class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Tasmanian Fuel Price sensor."""
-    _attr_has_entity_name = True
     _attr_has_entity_name = True
 
     def __init__(
@@ -206,3 +191,4 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
         # This will be called after a successful data fetch, and we can tell Home Assistant
         # to re-read our sensor's state, which will now have the correct expiry time.
         self.async_write_ha_state()
+
