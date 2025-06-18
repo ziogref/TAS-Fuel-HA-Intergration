@@ -27,7 +27,7 @@ FUEL_TYPES = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LPG"]
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
-    VERSION = 1
+    VERSION = 2  # <-- BUMPED VERSION TO FORCE A REFRESH
     data: dict[str, Any] = {}
 
     async def async_step_user(
