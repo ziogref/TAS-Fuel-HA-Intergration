@@ -1,4 +1,4 @@
-"""Button platform for Tasmanian Fuel Prices."""
+"""Button platform for Fuel Prices."""
 from __future__ import annotations
 from dataclasses import dataclass
 
@@ -18,7 +18,7 @@ from .const import DOMAIN
 
 @dataclass(frozen=True, kw_only=True)
 class TasFuelButtonEntityDescription(ButtonEntityDescription):
-    """Describes a Tasmanian Fuel Prices button entity."""
+    """Describes a Fuel Prices button entity."""
 
 BUTTONS: tuple[TasFuelButtonEntityDescription, ...] = (
     TasFuelButtonEntityDescription(
@@ -54,7 +54,7 @@ async def async_setup_entry(
 
 
 class TasFuelDiagnosticButton(ButtonEntity):
-    """Base class for Tasmanian Fuel Prices diagnostic buttons."""
+    """Base class for Fuel Prices diagnostic buttons."""
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 

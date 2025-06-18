@@ -4,7 +4,6 @@ from datetime import datetime
 
 from homeassistant.components.sensor import (
     SensorEntity,
-    SensorEntityDescription,
     SensorDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -52,7 +51,6 @@ async def async_setup_entry(
         all_stations = coordinator.data.get('stations', [])
         all_prices = coordinator.data.get('prices', [])
         
-        # Use string for station codes to ensure consistent matching
         all_stations_map = {str(station['code']): station for station in all_stations}
 
         # Filter prices for the selected fuel type to find the cheapest
@@ -85,7 +83,7 @@ async def async_setup_entry(
                         fuel_type=fuel_type,
                         name=f"Favourite: {station_name}",
                         unique_id_suffix=f"fav_{station_code_str}",
-                        is_favourite=True # Flag this as a favourite sensor
+                        is_favourite=True
                     )
                 )
 
@@ -140,7 +138,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
 
         station_info = all_stations_map.get(self._station_code)
         
-        # Find the price for the specific fuel type for this sensor's state
         price_info = next(
             (
                 p
@@ -151,21 +148,17 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         )
 
         if station_info and price_info and price_info.get('price') is not None:
-            # The state of the sensor is the price of the selected fuel type
             self._attr_native_value = round(price_info.get('price') / 100.0, 3)
             
-            # For favourite stations, we add all available details as attributes
             if self._is_favourite:
-                # Get all prices for this specific station
                 station_prices = [
                     p for p in all_prices if str(p.get("stationcode")) == self._station_code
                 ]
-                # Combine station info and all its prices into the attributes
                 self._attr_extra_state_attributes = {
                     **station_info,
                     "all_prices_at_station": station_prices
                 }
-            else: # For cheapest stations, keep attributes minimal
+            else:
                  self._attr_extra_state_attributes = {
                     ATTR_STATION_ID: self._station_code,
                     ATTR_BRAND: station_info.get("brand"),

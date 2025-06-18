@@ -7,7 +7,7 @@ import uuid
 LOGGER: Logger = getLogger(__package__)
 
 # The domain of the integration. This must be unique.
-DOMAIN = "tas_fuel_prices"
+DOMAIN = "fuel_prices"
 
 # Attributes
 ATTR_STATION_ID = "station_id"
@@ -24,7 +24,7 @@ API_HEADERS = {
     "Content-Type": "application/json; charset=utf-8",
 }
 
-# Configuration Defaults - RENAMED
+# Configuration Defaults
 CONF_API_KEY = "api_key"
 CONF_API_SECRET = "api_secret"
 CONF_FUEL_TYPE = "fuel_type"
