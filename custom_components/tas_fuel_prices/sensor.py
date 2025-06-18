@@ -1,11 +1,15 @@
 """Sensor platform for Tasmanian Fuel Prices."""
 from __future__ import annotations
+from datetime import datetime
 
-from typing import Any
-
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorEntityDescription,
+    SensorDeviceClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -13,6 +17,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 
+from .api import TasFuelAPI
 from .const import (
     DOMAIN,
     LOGGER,
@@ -31,7 +36,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    data_bundle = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
+    api_client: TasFuelAPI = data_bundle["api"]
     
     await coordinator.async_refresh()
     
@@ -39,6 +46,9 @@ async def async_setup_entry(
     favourite_stations = entry.options.get(CONF_STATIONS, [])
 
     sensors: list[SensorEntity] = []
+
+    # Add the diagnostic sensor for token expiry
+    sensors.append(TasFuelTokenExpirySensor(coordinator, api_client))
 
     if coordinator.data:
         all_stations = coordinator.data.get('stations', [])
@@ -81,6 +91,7 @@ async def async_setup_entry(
 
 class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Tasmanian Fuel Price sensor."""
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -105,9 +116,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         """Return information about the device this sensor is part of."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
-            name="Tasmanian Fuel Prices",
-            manufacturer="ziogref",
-            model="v1.0.3"
         )
 
     @callback
@@ -151,3 +159,29 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_FUEL_TYPE: self._fuel_type,
                 "error": "Price not available for this station and fuel type",
             }
+
+class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
+    """Representation of a sensor that shows token expiry."""
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: DataUpdateCoordinator, api_client: TasFuelAPI) -> None:
+        """Initialize the diagnostic sensor."""
+        super().__init__(coordinator)
+        self._api_client = api_client
+        self._attr_name = "Access Token Expiry"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_token_expiry"
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this sensor is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+        )
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the state of the sensor."""
+        # The API client stores the expiry time as a datetime object
+        return self._api_client.token_expiry
