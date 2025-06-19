@@ -1,13 +1,13 @@
 """Constants for the Tasmanian Fuel Prices integration."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, UTC
 from logging import Logger, getLogger
+import uuid
 
 LOGGER: Logger = getLogger(__package__)
 
 # The domain of the integration. This must be unique.
 DOMAIN = "tas_fuel_prices"
-CONF_DEVICE_NAME = "Tasmanian Fuel Prices"
 
 # Attributes
 ATTR_STATION_ID = "station_id"
@@ -24,7 +24,7 @@ API_HEADERS = {
     "Content-Type": "application/json; charset=utf-8",
 }
 
-# Configuration from UI
+# Configuration Defaults - RENAMED
 CONF_API_KEY = "api_key"
 CONF_API_SECRET = "api_secret"
 CONF_FUEL_TYPE = "fuel_type"

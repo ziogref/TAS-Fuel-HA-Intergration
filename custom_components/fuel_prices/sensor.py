@@ -42,7 +42,6 @@ async def async_setup_entry(
 
     sensors: list[SensorEntity] = []
 
-    # Add the diagnostic sensor for token expiry
     sensors.append(TasFuelTokenExpirySensor(coordinator, api_client, hass.config.time_zone))
 
     if coordinator.data:
@@ -53,7 +52,7 @@ async def async_setup_entry(
 
         relevant_prices = [p for p in all_prices if p.get('fueltype') == fuel_type]
 
-        cheapest_prices = sorted(relevant_prices, key=lambda x: x.get('price', 999))[:5]
+        cheapest_prices = sorted(relevant_prices, key=lambda x: float(x.get('price', 999)))[:5]
         for i, price_info in enumerate(cheapest_prices):
             station_code = str(price_info.get('stationcode'))
             if station_code in all_stations_map:
@@ -145,7 +144,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         )
 
         if station_info and price_info and price_info.get('price') is not None:
-            self._attr_native_value = round(price_info.get('price') / 100.0, 3)
+            self._attr_native_value = round(float(price_info.get('price')) / 100.0, 3)
             
             if self._is_favourite:
                 station_prices = [

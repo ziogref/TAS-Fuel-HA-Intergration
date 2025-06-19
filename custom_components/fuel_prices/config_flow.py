@@ -41,7 +41,6 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_API_KEY], user_input[CONF_API_SECRET], session
             )
             try:
-                # Test credentials by fetching a token
                 await api._get_access_token()
             except (ClientError, ClientResponseError):
                 errors["base"] = "auth_error"
@@ -49,11 +48,9 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 LOGGER.exception("Unexpected exception during auth test")
                 errors["base"] = "unknown_error"
             else:
-                # Auth is valid, store the data and proceed to the options step
                 self.data.update(user_input)
                 return await self.async_step_options()
 
-        # Show the form to the user
         schema = vol.Schema(
             {
                 vol.Required(CONF_API_KEY): str,
@@ -69,7 +66,6 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> dict[str, Any]:
         """Handle the options step during initial setup."""
         if user_input is not None:
-            # Combine the auth data with the options and create the entry
             stations_str = user_input.get(CONF_STATIONS, "")
             stations_list = [
                 s.strip() for s in stations_str.split(",") if s.strip().isdigit()
@@ -82,7 +78,6 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 title="Tasmanian Fuel Prices", data=self.data, options=options_data
             )
 
-        # Show the options form
         schema = vol.Schema(
             {
                 vol.Required(CONF_FUEL_TYPE, default="U91"): vol.In(FUEL_TYPES),

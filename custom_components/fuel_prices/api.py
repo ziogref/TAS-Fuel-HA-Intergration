@@ -1,6 +1,5 @@
 """API client for the Tasmanian Fuel Prices integration."""
 
-import asyncio
 from datetime import datetime, timedelta, UTC
 import backoff
 import aiohttp
@@ -9,7 +8,7 @@ import uuid
 
 from aiohttp import ClientError, ClientSession, ClientResponseError
 
-from .const import API_BASE_URL, API_HEADERS, OAUTH_URL, LOGGER, CONF_API_KEY
+from .const import API_BASE_URL, API_HEADERS, OAUTH_URL, LOGGER
 
 
 class TasFuelAPI:
