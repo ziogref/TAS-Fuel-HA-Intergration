@@ -25,7 +25,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             identifiers={(DOMAIN, entry.entry_id)},
             name=CONF_DEVICE_NAME,
             manufacturer="Custom Integration",
-            model="1.0.5",
+            model="1.0.6", # Version bump
         ),
     )
 
