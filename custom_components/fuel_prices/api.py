@@ -30,14 +30,8 @@ class TasFuelAPI:
 
     @property
     def token_expiry(self) -> datetime | None:
-        """Return the access token's expiry time."""
+        """Return the token expiry datetime object."""
         return self._token_expiry
-
-    def force_token_refresh(self) -> None:
-        """Force the access token to be refreshed on the next call."""
-        LOGGER.info("Forcing a refresh of the access token on the next update.")
-        self._access_token = None
-        self._token_expiry = None
 
     @backoff.on_exception(backoff.expo, ClientResponseError, max_tries=3, logger=LOGGER)
     async def _get_access_token(self) -> str:
@@ -73,7 +67,6 @@ class TasFuelAPI:
 
             self._access_token = token_data["access_token"]
             expiry_seconds = int(token_data.get("expires_in", 43199))
-            # Set expiry time using a timezone-aware datetime object
             self._token_expiry = datetime.now(UTC) + timedelta(seconds=expiry_seconds - 60)
             
             LOGGER.info("Successfully obtained new access token.")

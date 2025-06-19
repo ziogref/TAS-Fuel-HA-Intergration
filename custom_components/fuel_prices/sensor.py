@@ -3,10 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-)
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
@@ -20,6 +17,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .api import TasFuelAPI
 from .const import (
     DOMAIN,
+    CONF_DEVICE_NAME,
     CONF_FUEL_TYPE,
     CONF_STATIONS,
     ATTR_STATION_ID,
@@ -44,18 +42,15 @@ async def async_setup_entry(
 
     sensors: list[SensorEntity] = []
 
-    # Add the diagnostic sensor for token expiry, passing the HA timezone to it
+    # Add the diagnostic sensor for token expiry
     sensors.append(TasFuelTokenExpirySensor(coordinator, api_client, hass.config.time_zone))
 
     if coordinator.data:
-        # The API returns a list directly under 'stations' and 'prices'
         all_stations = coordinator.data.get('stations', [])
         all_prices = coordinator.data.get('prices', [])
         
-        # Use string for station codes to ensure consistent matching
         all_stations_map = {str(station['code']): station for station in all_stations}
 
-        # Filter prices for the selected fuel type to find the cheapest
         relevant_prices = [p for p in all_prices if p.get('fueltype') == fuel_type]
 
         cheapest_prices = sorted(relevant_prices, key=lambda x: x.get('price', 999))[:5]
@@ -72,7 +67,6 @@ async def async_setup_entry(
                     )
                 )
 
-        # Create sensors for favourite stations
         for station_code in favourite_stations:
             station_code_str = str(station_code)
             if station_code_str in all_stations_map:
@@ -84,7 +78,7 @@ async def async_setup_entry(
                         fuel_type=fuel_type,
                         name=f"Favourite: {station_name}",
                         unique_id_suffix=f"fav_{station_code_str}",
-                        is_favourite=True # Flag this as a favourite sensor
+                        is_favourite=True
                     )
                 )
 
@@ -120,6 +114,8 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         """Return information about the device this sensor is part of."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+            manufacturer="Custom Integration",
         )
 
     @callback
@@ -139,7 +135,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
 
         station_info = all_stations_map.get(self._station_code)
         
-        # Find the price for the specific fuel type for this sensor's state
         price_info = next(
             (
                 p
@@ -150,21 +145,17 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         )
 
         if station_info and price_info and price_info.get('price') is not None:
-            # The state of the sensor is the price of the selected fuel type
             self._attr_native_value = round(price_info.get('price') / 100.0, 3)
             
-            # For favourite stations, add all available details as attributes
             if self._is_favourite:
-                # Get all prices for this specific station
                 station_prices = [
                     p for p in all_prices if str(p.get("stationcode")) == self._station_code
                 ]
-                # Combine station info and all its prices into the attributes
                 self._attr_extra_state_attributes = {
                     **station_info,
                     "all_prices_at_station": station_prices
                 }
-            else: # For cheapest stations, keep attributes minimal
+            else:
                  self._attr_extra_state_attributes = {
                     ATTR_STATION_ID: self._station_code,
                     ATTR_BRAND: station_info.get("brand"),
@@ -186,20 +177,21 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: DataUpdateCoordinator, api_client: TasFuelAPI, time_zone: ZoneInfo) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, api_client: TasFuelAPI, tz_str: str) -> None:
         """Initialize the diagnostic sensor."""
         super().__init__(coordinator)
         self._api_client = api_client
-        self._time_zone = time_zone
+        self._time_zone = ZoneInfo(tz_str)
         self._attr_name = "Access Token Expiry"
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_token_expiry"
-        # We are providing a formatted string, so we must not set a device_class.
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return information about the device this sensor is part of."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+            manufacturer="Custom Integration",
         )
 
     @property
@@ -209,10 +201,8 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
         if expiry_time is None:
             return None
         
-        # Convert the UTC datetime object to the local timezone of the Home Assistant instance
         local_time = expiry_time.astimezone(self._time_zone)
         
-        # Format the local time into the desired string format
         return local_time.strftime('%Y-%m-%d %H:%M:%S')
 
     @callback
