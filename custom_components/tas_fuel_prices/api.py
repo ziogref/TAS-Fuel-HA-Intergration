@@ -1,6 +1,5 @@
 """API client for the Tasmanian Fuel Prices integration."""
 
-import asyncio
 from datetime import datetime, timedelta, UTC
 import backoff
 import aiohttp
@@ -17,16 +16,21 @@ class TasFuelAPI:
 
     def __init__(
         self,
-        client_id: str,
-        client_secret: str,
+        api_key: str,
+        api_secret: str,
         session: ClientSession,
     ) -> None:
         """Initialize the API client."""
-        self._client_id = client_id
-        self._client_secret = client_secret
+        self._api_key = api_key
+        self._api_secret = api_secret
         self._session = session
         self._access_token: str | None = None
         self._token_expiry: datetime | None = None
+
+    @property
+    def token_expiry(self) -> datetime | None:
+        """Return the token expiry datetime object."""
+        return self._token_expiry
 
     @backoff.on_exception(backoff.expo, ClientResponseError, max_tries=3, logger=LOGGER)
     async def _get_access_token(self) -> str:
@@ -34,14 +38,14 @@ class TasFuelAPI:
         Retrieve a new OAuth2 access token from the API.
         The token is valid for 12 hours.
         """
-        if self._access_token and self._token_expiry and self._token_expiry > datetime.now():
+        if self._access_token and self._token_expiry and self._token_expiry > datetime.now(UTC):
             LOGGER.debug("Using existing, valid access token.")
             return self._access_token
 
         LOGGER.info("Requesting new access token.")
         
         params = {"grant_type": "client_credentials"}
-        auth = aiohttp.BasicAuth(self._client_id, self._client_secret)
+        auth = aiohttp.BasicAuth(self._api_key, self._api_secret)
 
         try:
             response = await self._session.get(
@@ -62,7 +66,7 @@ class TasFuelAPI:
 
             self._access_token = token_data["access_token"]
             expiry_seconds = int(token_data.get("expires_in", 43199))
-            self._token_expiry = datetime.now() + timedelta(seconds=expiry_seconds - 60)
+            self._token_expiry = datetime.now(UTC) + timedelta(seconds=expiry_seconds - 60)
             
             LOGGER.info("Successfully obtained new access token.")
             return self._access_token
@@ -87,25 +91,21 @@ class TasFuelAPI:
         """
         token = await self._get_access_token()
         
-        # Generate the required headers for the prices endpoint
         transaction_id = str(uuid.uuid4())
-        # Use the modern, timezone-aware way to get UTC time
         request_timestamp = datetime.now(UTC).strftime('%d/%m/%Y %I:%M:%S %p')
 
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json; charset=utf-8",
-            "apikey": self._client_id,
+            "apikey": self._api_key,
             "transactionid": transaction_id,
             "requesttimestamp": request_timestamp,
         }
 
-        # Parameters for the GET request to fetch all prices for Tasmania
         params = {"states": "TAS"}
         
         try:
             LOGGER.debug("Fetching all fuel prices for TAS from API.")
-            # This is a GET request
             response = await self._session.get(
                 API_BASE_URL,
                 params=params,
