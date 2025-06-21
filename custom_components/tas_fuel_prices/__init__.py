@@ -6,6 +6,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import TasFuelAPI
@@ -18,14 +19,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tasmanian Fuel Prices from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     
-    device_registry = hass.helpers.device_registry.async_get(hass)
+    # Correctly get the device registry
+    device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         device_info=DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=CONF_DEVICE_NAME,
             manufacturer="Custom Integration",
-            model="1.0.5",
+            model="1.0.9",
         ),
     )
 
