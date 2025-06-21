@@ -124,3 +124,12 @@ class TasFuelAPI:
         except Exception as err:
             LOGGER.error("Unexpected error fetching prices: %s", err)
             raise
+
+    async def force_refresh_token(self) -> None:
+        """
+        Force a refresh of the access token by clearing the existing one.
+        The next call to `fetch_prices` will then request a new token.
+        """
+        LOGGER.info("Forcing a refresh of the access token.")
+        self._access_token = None
+        self._token_expiry = None

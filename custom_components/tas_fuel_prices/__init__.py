@@ -11,7 +11,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .api import TasFuelAPI
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL, CONF_API_KEY, CONF_API_SECRET, CONF_DEVICE_NAME
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+# Add the BUTTON platform to the list of platforms to be loaded.
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
