@@ -7,7 +7,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.components.logbook import async_log_entry
 
 from .api import TasFuelAPI
 from .const import (
@@ -49,13 +48,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             data = await api.fetch_prices()
             
-            # Log for the main device first
-            async_log_entry(
-                hass,
-                name=CONF_DEVICE_NAME,
-                message="Fuel prices updated successfully",
-                domain=DOMAIN,
-                device_id=main_device_entry.id,
+            # Log for the main device first by calling the logbook service
+            await hass.services.async_call(
+                "logbook",
+                "log",
+                {
+                    "name": CONF_DEVICE_NAME,
+                    "message": "Fuel prices updated",
+                    "domain": DOMAIN,
+                    "device_id": main_device_entry.id,
+                },
             )
 
             # Then, log for each of the fuel-type specific devices
@@ -66,12 +68,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     identifiers={(DOMAIN, f"{entry.entry_id}_{fuel_type}")}
                 )
                 if fuel_type_device:
-                    async_log_entry(
-                        hass,
-                        name=f"{CONF_DEVICE_NAME} - {fuel_type}",
-                        message="Fuel prices updated successfully",
-                        domain=DOMAIN,
-                        device_id=fuel_type_device.id,
+                    await hass.services.async_call(
+                        "logbook",
+                        "log",
+                        {
+                            "name": f"{CONF_DEVICE_NAME} - {fuel_type}",
+                            "message": "Fuel prices updated",
+                            "domain": DOMAIN,
+                            "device_id": fuel_type_device.id,
+                        },
                     )
 
             return data
