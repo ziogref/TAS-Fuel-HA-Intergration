@@ -1,6 +1,6 @@
 """Sensor platform for Tasmanian Fuel Prices."""
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from homeassistant.components.sensor import SensorEntity
@@ -25,6 +25,7 @@ from .const import (
     ATTR_BRAND,
     ATTR_FUEL_TYPE,
     ATTR_LAST_UPDATED,
+    LOGGER,
 )
 
 async def async_setup_entry(
@@ -39,6 +40,7 @@ async def async_setup_entry(
     
     fuel_type = entry.options.get(CONF_FUEL_TYPE, "U91")
     favourite_stations = entry.options.get(CONF_STATIONS, [])
+    time_zone = ZoneInfo(hass.config.time_zone)
 
     sensors: list[SensorEntity] = []
 
@@ -62,7 +64,8 @@ async def async_setup_entry(
                         station_code=station_code,
                         fuel_type=fuel_type,
                         name=f"Cheapest {fuel_type} #{i+1}",
-                        unique_id_suffix=f"cheapest_{fuel_type}_{i+1}"
+                        unique_id_suffix=f"cheapest_{fuel_type}_{i+1}",
+                        time_zone=time_zone
                     )
                 )
 
@@ -77,7 +80,8 @@ async def async_setup_entry(
                         fuel_type=fuel_type,
                         name=f"Favourite: {station_name}",
                         unique_id_suffix=f"fav_{station_code_str}",
-                        is_favourite=True
+                        is_favourite=True,
+                        time_zone=time_zone
                     )
                 )
 
@@ -95,6 +99,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         fuel_type: str,
         name: str,
         unique_id_suffix: str,
+        time_zone: ZoneInfo,
         is_favourite: bool = False,
     ) -> None:
         """Initialize the sensor."""
@@ -102,6 +107,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self._station_code = station_code
         self._fuel_type = fuel_type
         self._is_favourite = is_favourite
+        self._time_zone = time_zone
         self._attr_name = name
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{unique_id_suffix}"
         self._attr_icon = "mdi:gas-station"
@@ -150,10 +156,42 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 station_prices = [
                     p for p in all_prices if str(p.get("stationcode")) == self._station_code
                 ]
-                self._attr_extra_state_attributes = {
+                
+                # Clean up the prices for the attribute, removing redundant info
+                cleaned_prices = [
+                    {
+                        "fueltype": p.get("fueltype"), 
+                        "price": p.get("price")
+                    } 
+                    for p in station_prices
+                ]
+
+                # Find the most recent update time
+                latest_update_str = None
+                if station_prices:
+                   latest_update_str = max(p.get("lastupdated") for p in station_prices if p.get("lastupdated"))
+                
+                last_updated_local_str = "Unknown"
+                if latest_update_str:
+                    try:
+                        # Parse the UTC time string from the API
+                        update_time_utc = datetime.strptime(latest_update_str, '%d/%m/%Y %H:%M:%S').replace(tzinfo=timezone.utc)
+                        # Convert to local timezone
+                        update_time_local = update_time_utc.astimezone(self._time_zone)
+                        # Format for display
+                        last_updated_local_str = update_time_local.strftime('%Y-%m-%d %H:%M:%S')
+                    except (ValueError, TypeError) as e:
+                        LOGGER.warning("Could not parse timestamp '%s': %s", latest_update_str, e)
+                        last_updated_local_str = "Invalid Date Format"
+
+                # Prepare the new attributes, ensuring all station info is included
+                attributes = {
                     **station_info,
-                    "all_prices_at_station": station_prices
+                    "all_prices_at_station": cleaned_prices,
+                    ATTR_LAST_UPDATED: last_updated_local_str
                 }
+                self._attr_extra_state_attributes = attributes
+                 
             else:
                  self._attr_extra_state_attributes = {
                     ATTR_STATION_ID: self._station_code,
