@@ -48,7 +48,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             data = await api.fetch_prices()
             
-            # Log for the main device first by calling the logbook service
+            # Log a single global entry for the update event.
+            # The logbook.log service does not accept a device_id.
             await hass.services.async_call(
                 "logbook",
                 "log",
@@ -56,28 +57,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     "name": CONF_DEVICE_NAME,
                     "message": "Fuel prices updated",
                     "domain": DOMAIN,
-                    "device_id": main_device_entry.id,
                 },
             )
-
-            # Then, log for each of the fuel-type specific devices
-            fuel_types = entry.options.get(CONF_FUEL_TYPES, [])
-            for fuel_type in fuel_types:
-                # Find the device for the specific fuel type
-                fuel_type_device = device_registry.async_get_device(
-                    identifiers={(DOMAIN, f"{entry.entry_id}_{fuel_type}")}
-                )
-                if fuel_type_device:
-                    await hass.services.async_call(
-                        "logbook",
-                        "log",
-                        {
-                            "name": f"{CONF_DEVICE_NAME} - {fuel_type}",
-                            "message": "Fuel prices updated",
-                            "domain": DOMAIN,
-                            "device_id": fuel_type_device.id,
-                        },
-                    )
 
             return data
         except Exception as err:
