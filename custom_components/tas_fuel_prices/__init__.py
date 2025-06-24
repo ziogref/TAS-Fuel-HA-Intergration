@@ -28,7 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     device_registry = dr.async_get(hass)
     # Get the main device entry
-    main_device_entry = device_registry.async_get_or_create(
+    device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
@@ -43,33 +43,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session,
     )
 
-    async def async_update_data():
-        """Fetch data from API and log the event for all relevant devices."""
-        try:
-            data = await api.fetch_prices()
-            
-            # Log a single global entry for the update event.
-            # The logbook.log service does not accept a device_id.
-            await hass.services.async_call(
-                "logbook",
-                "log",
-                {
-                    "name": CONF_DEVICE_NAME,
-                    "message": "Fuel prices updated",
-                    "domain": DOMAIN,
-                },
-            )
-
-            return data
-        except Exception as err:
-            LOGGER.error("Error communicating with API during update: %s", err)
-            raise
-
     coordinator = DataUpdateCoordinator(
         hass,
         LOGGER,
         name=DOMAIN,
-        update_method=async_update_data,
+        update_method=api.fetch_prices,
         update_interval=SCAN_INTERVAL,
     )
 
