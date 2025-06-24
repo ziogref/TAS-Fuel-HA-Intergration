@@ -18,7 +18,7 @@ from .api import TasFuelAPI
 from .const import (
     DOMAIN,
     CONF_DEVICE_NAME,
-    CONF_FUEL_TYPE,
+    CONF_FUEL_TYPES,
     CONF_STATIONS,
     ATTR_STATION_ID,
     ATTR_ADDRESS,
@@ -38,12 +38,13 @@ async def async_setup_entry(
     coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
     
-    fuel_type = entry.options.get(CONF_FUEL_TYPE, "U91")
+    fuel_types = entry.options.get(CONF_FUEL_TYPES, ["U91"])
     favourite_stations = entry.options.get(CONF_STATIONS, [])
     time_zone = ZoneInfo(hass.config.time_zone)
 
     sensors: list[SensorEntity] = []
 
+    # The token expiry sensor is not tied to a specific fuel type, so it uses the main device.
     sensors.append(TasFuelTokenExpirySensor(coordinator, api_client, hass.config.time_zone))
 
     if coordinator.data:
@@ -52,38 +53,39 @@ async def async_setup_entry(
         
         all_stations_map = {str(station['code']): station for station in all_stations}
 
-        relevant_prices = [p for p in all_prices if p.get('fueltype') == fuel_type]
+        for fuel_type in fuel_types:
+            relevant_prices = [p for p in all_prices if p.get('fueltype') == fuel_type]
 
-        cheapest_prices = sorted(relevant_prices, key=lambda x: float(x.get('price', 999)))[:5]
-        for i, price_info in enumerate(cheapest_prices):
-            station_code = str(price_info.get('stationcode'))
-            if station_code in all_stations_map:
-                sensors.append(
-                    TasFuelPriceSensor(
-                        coordinator=coordinator,
-                        station_code=station_code,
-                        fuel_type=fuel_type,
-                        name=f"Cheapest {fuel_type} #{i+1}",
-                        unique_id_suffix=f"cheapest_{fuel_type}_{i+1}",
-                        time_zone=time_zone
+            cheapest_prices = sorted(relevant_prices, key=lambda x: float(x.get('price', 999)))[:5]
+            for i, price_info in enumerate(cheapest_prices):
+                station_code = str(price_info.get('stationcode'))
+                if station_code in all_stations_map:
+                    sensors.append(
+                        TasFuelPriceSensor(
+                            coordinator=coordinator,
+                            station_code=station_code,
+                            fuel_type=fuel_type,
+                            name=f"Cheapest {fuel_type} #{i+1}",
+                            unique_id_suffix=f"cheapest_{fuel_type}_{i+1}",
+                            time_zone=time_zone
+                        )
                     )
-                )
 
-        for station_code in favourite_stations:
-            station_code_str = str(station_code)
-            if station_code_str in all_stations_map:
-                station_name = all_stations_map[station_code_str].get('name', f"Station {station_code_str}")
-                sensors.append(
-                    TasFuelPriceSensor(
-                        coordinator=coordinator,
-                        station_code=station_code_str,
-                        fuel_type=fuel_type,
-                        name=f"Favourite: {station_name}",
-                        unique_id_suffix=f"fav_{station_code_str}",
-                        is_favourite=True,
-                        time_zone=time_zone
+            for station_code in favourite_stations:
+                station_code_str = str(station_code)
+                if station_code_str in all_stations_map:
+                    station_name = all_stations_map[station_code_str].get('name', f"Station {station_code_str}")
+                    sensors.append(
+                        TasFuelPriceSensor(
+                            coordinator=coordinator,
+                            station_code=station_code_str,
+                            fuel_type=fuel_type,
+                            name=f"Favourite: {station_name} ({fuel_type})",
+                            unique_id_suffix=f"fav_{station_code_str}_{fuel_type}",
+                            is_favourite=True,
+                            time_zone=time_zone
+                        )
                     )
-                )
 
     async_add_entities(sensors)
 
@@ -117,10 +119,12 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return information about the device this sensor is part of."""
+        # This creates a separate device for each fuel type.
         return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
-            name=CONF_DEVICE_NAME,
+            identifiers={(DOMAIN, f"{self.coordinator.config_entry.entry_id}_{self._fuel_type}")},
+            name=f"{CONF_DEVICE_NAME} - {self._fuel_type}",
             manufacturer="Custom Integration",
+            via_device=(DOMAIN, self.coordinator.config_entry.entry_id)
         )
 
     @callback

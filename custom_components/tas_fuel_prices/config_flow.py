@@ -9,19 +9,20 @@ from aiohttp import ClientError, ClientResponseError
 from homeassistant.config_entries import ConfigFlow, OptionsFlow, ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
     LOGGER,
     CONF_API_KEY,
     CONF_API_SECRET,
-    CONF_FUEL_TYPE,
+    CONF_FUEL_TYPES,
     CONF_STATIONS,
 )
 from .api import TasFuelAPI
 
 # Available fuel types from the API documentation
-FUEL_TYPES = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LPG"]
+FUEL_TYPES_OPTIONS = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LPG"]
 
 
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -71,7 +72,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 s.strip() for s in stations_str.split(",") if s.strip().isdigit()
             ]
             options_data = {
-                CONF_FUEL_TYPE: user_input[CONF_FUEL_TYPE],
+                CONF_FUEL_TYPES: user_input[CONF_FUEL_TYPES],
                 CONF_STATIONS: stations_list[:5],
             }
             return self.async_create_entry(
@@ -80,7 +81,9 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_FUEL_TYPE, default="U91"): vol.In(FUEL_TYPES),
+                vol.Required(CONF_FUEL_TYPES, default=["U91"]): cv.multi_select(
+                    FUEL_TYPES_OPTIONS
+                ),
                 vol.Optional(CONF_STATIONS, default=""): str,
             }
         )
@@ -112,12 +115,14 @@ class OptionsFlowHandler(OptionsFlow):
             user_input[CONF_STATIONS] = stations_list[:5]
             return self.async_create_entry(title="", data=user_input)
 
-        current_fuel_type = self.config_entry.options.get(CONF_FUEL_TYPE, "U91")
+        current_fuel_types = self.config_entry.options.get(CONF_FUEL_TYPES, ["U91"])
         current_stations = self.config_entry.options.get(CONF_STATIONS, [])
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_FUEL_TYPE, default=current_fuel_type): vol.In(FUEL_TYPES),
+                vol.Required(CONF_FUEL_TYPES, default=current_fuel_types): cv.multi_select(
+                    FUEL_TYPES_OPTIONS
+                ),
                 vol.Optional(
                     CONF_STATIONS,
                     description={"suggested_value": ",".join(map(str, current_stations))},

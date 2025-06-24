@@ -27,7 +27,8 @@ API_HEADERS = {
 # Configuration from UI
 CONF_API_KEY = "api_key"
 CONF_API_SECRET = "api_secret"
-CONF_FUEL_TYPE = "fuel_type"
+# Renamed to reflect multiple fuel types can be selected
+CONF_FUEL_TYPES = "fuel_types"
 CONF_STATIONS = "stations"
 
 # Update interval for the coordinator
