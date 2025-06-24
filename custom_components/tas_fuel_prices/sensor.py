@@ -188,9 +188,13 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                         LOGGER.warning("Could not parse timestamp '%s': %s", latest_update_str, e)
                         last_updated_local_str = "Invalid Date Format"
 
-                # Prepare the new attributes, ensuring all station info is included
+                # Prepare the new attributes, removing brandid and stationid
+                filtered_station_info = station_info.copy()
+                filtered_station_info.pop("brandid", None)
+                filtered_station_info.pop("stationid", None)
+                
                 attributes = {
-                    **station_info,
+                    **filtered_station_info,
                     "all_prices_at_station": cleaned_prices,
                     ATTR_LAST_UPDATED: last_updated_local_str
                 }
