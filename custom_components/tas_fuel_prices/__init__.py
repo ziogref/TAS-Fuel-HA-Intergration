@@ -7,11 +7,19 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.components import logbook
 
 from .api import TasFuelAPI
-from .const import DOMAIN, LOGGER, SCAN_INTERVAL, CONF_API_KEY, CONF_API_SECRET, CONF_DEVICE_NAME
+from .const import (
+    DOMAIN,
+    LOGGER,
+    SCAN_INTERVAL,
+    CONF_API_KEY,
+    CONF_API_SECRET,
+    CONF_DEVICE_NAME,
+    CONF_FUEL_TYPES,
+)
 
-# Add the BUTTON platform to the list of platforms to be loaded.
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 
 
@@ -20,7 +28,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
+    # Get the main device entry
+    main_device_entry = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
@@ -35,11 +44,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session,
     )
 
+    async def async_update_data():
+        """Fetch data from API and log the event for all relevant devices."""
+        try:
+            data = await api.fetch_prices()
+            
+            # Log for the main device first
+            logbook.async_log(
+                hass,
+                name=CONF_DEVICE_NAME,
+                message="Fuel prices updated successfully",
+                domain=DOMAIN,
+                device_id=main_device_entry.id,
+            )
+
+            # Then, log for each of the fuel-type specific devices
+            fuel_types = entry.options.get(CONF_FUEL_TYPES, [])
+            for fuel_type in fuel_types:
+                # Find the device for the specific fuel type
+                fuel_type_device = device_registry.async_get_device(
+                    identifiers={(DOMAIN, f"{entry.entry_id}_{fuel_type}")}
+                )
+                if fuel_type_device:
+                    logbook.async_log(
+                        hass,
+                        name=f"{CONF_DEVICE_NAME} - {fuel_type}",
+                        message="Fuel prices updated successfully",
+                        domain=DOMAIN,
+                        device_id=fuel_type_device.id,
+                    )
+
+            return data
+        except Exception as err:
+            LOGGER.error("Error communicating with API during update: %s", err)
+            raise
+
     coordinator = DataUpdateCoordinator(
         hass,
         LOGGER,
         name=DOMAIN,
-        update_method=api.fetch_prices,
+        update_method=async_update_data,
         update_interval=SCAN_INTERVAL,
     )
 
