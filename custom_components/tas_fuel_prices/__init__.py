@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.components import logbook
+from homeassistant.components.logbook import async_log_entry
 
 from .api import TasFuelAPI
 from .const import (
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             data = await api.fetch_prices()
             
             # Log for the main device first
-            logbook.async_log(
+            async_log_entry(
                 hass,
                 name=CONF_DEVICE_NAME,
                 message="Fuel prices updated successfully",
@@ -66,7 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     identifiers={(DOMAIN, f"{entry.entry_id}_{fuel_type}")}
                 )
                 if fuel_type_device:
-                    logbook.async_log(
+                    async_log_entry(
                         hass,
                         name=f"{CONF_DEVICE_NAME} - {fuel_type}",
                         message="Fuel prices updated successfully",
