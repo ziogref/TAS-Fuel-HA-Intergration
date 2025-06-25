@@ -58,5 +58,17 @@ The integration will create two types of sensors:
 2. **Favourite Stations**: Up to five sensors named sensor.tas\_fuel\_favourite\_\<station\_name\>.  
    * The state of the sensor is the price of the fuel at that station.  
    * Attributes include the station's address, fuel type, and the last time the price was updated.
+  
+## **Community-Sourced Data**
+
+This integration is enhanced with community-maintained data for features not provided by the official FuelCheck API, such as specific discount programs and station amenities. This additional data is managed in a separate public repository:
+
+[**TAS-Fuel-HA-Additional-Data Repository**](https://github.com/ziogref/TAS-Fuel-HA-Additional-Data)
+
+Available community data includes:
+* **Fuel Discounts:** Lists of stations that accept Woolworths, Coles, and RACT discount offers.
+* **Tyre Inflation:** A list of service stations that provide tyre inflation facilities.
+
+We encourage all users to contribute to this repository to help make the data more accurate and comprehensive for everyone.
 
 *This integration is not affiliated with or endorsed by the NSW Government or any fuel provider.*
