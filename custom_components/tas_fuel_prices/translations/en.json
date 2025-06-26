@@ -1,0 +1,57 @@
+{
+  "title": "Tasmanian Fuel Prices",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tasmanian Fuel Prices: Authentication (Step 1/2)",
+        "description": "Please enter your API Key and Secret from the NSW FuelCheck API portal.",
+        "data": {
+          "api_key": "API Key",
+          "api_secret": "API Secret"
+        }
+      },
+      "options": {
+        "title": "Tasmanian Fuel Prices: Options (Step 2/2)",
+        "description": "Configure your preferred fuel type and favourite stations.",
+        "data": {
+          "fuel_type": "Fuel Type",
+          "stations": "Favourite Stations (up to 5, comma-separated codes)"
+        }
+      }
+    },
+    "error": {
+      "auth_error": "Invalid authentication credentials. Please check your API Key and Secret and try again.",
+      "unknown_error": "An unknown error occurred. Please check the logs for more details."
+    },
+    "abort": {
+      "already_configured": "This service is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tasmanian Fuel Prices: Options",
+        "description": "Re-configure your preferred fuel type and favourite stations.",
+        "data": {
+          "fuel_type": "Fuel Type",
+          "stations": "Favourite Stations (up to 5, comma-separated codes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "refresh_token": {
+        "name": "Refresh Access Token"
+      },
+      "refresh_prices": {
+        "name": "Refresh Fuel Prices"
+      }
+    },
+    "sensor": {
+      "token_expiry": {
+        "name": "Access Token Expiry"
+      }
+    }
+  }
+}
