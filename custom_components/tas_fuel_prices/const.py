@@ -29,9 +29,10 @@ API_HEADERS = {
 
 # Discount Data URLs from external repo
 BASE_DISCOUNT_URL = "https://raw.githubusercontent.com/ziogref/TAS-Fuel-HA-Additional-Data/main/Fuel-Discount/"
-COLES_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}Coles.txt"
 WOOLWORTHS_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}Woolworths.txt"
+COLES_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}Coles.txt"
 RACT_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}RACT.txt"
+
 
 # Configuration from UI
 CONF_API_KEY = "api_key"
@@ -41,14 +42,14 @@ CONF_STATIONS = "stations"
 
 # Discount Configuration
 CONF_DISCOUNT_PROVIDERS = "discount_providers"
-CONF_ENABLE_COLES_DISCOUNT = "enable_coles_discount"
 CONF_ENABLE_WOOLWORTHS_DISCOUNT = "enable_woolworths_discount"
+CONF_ENABLE_COLES_DISCOUNT = "enable_coles_discount"
 CONF_ENABLE_RACT_DISCOUNT = "enable_ract_discount"
 
-CONF_COLES_DISCOUNT_AMOUNT = "coles_discount_amount"
-CONF_COLES_ADDITIONAL_STATIONS = "coles_additional_stations"
 CONF_WOOLWORTHS_DISCOUNT_AMOUNT = "woolworths_discount_amount"
 CONF_WOOLWORTHS_ADDITIONAL_STATIONS = "woolworths_additional_stations"
+CONF_COLES_DISCOUNT_AMOUNT = "coles_discount_amount"
+CONF_COLES_ADDITIONAL_STATIONS = "coles_additional_stations"
 CONF_RACT_DISCOUNT_AMOUNT = "ract_discount_amount"
 CONF_RACT_ADDITIONAL_STATIONS = "ract_additional_stations"
 

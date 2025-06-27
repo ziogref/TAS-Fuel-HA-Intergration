@@ -182,17 +182,8 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 options = self.entry.options
                 discount_lists = self.discount_coordinator.data
 
-                # Check Coles
-                if options.get(CONF_ENABLE_COLES_DISCOUNT):
-                    additional_coles = [s.strip() for s in options.get(CONF_COLES_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
-                    coles_stations = set(discount_lists.get("coles", []) + additional_coles)
-                    if self._station_code in coles_stations:
-                        discount_applied_amount = float(options.get(CONF_COLES_DISCOUNT_AMOUNT, 0))
-                        price -= discount_applied_amount
-                        discount_provider = "Coles"
-                
-                # Check Woolworths (only if Coles discount was not already applied)
-                if discount_provider == "None" and options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
+                # Check Woolworths
+                if options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
                     additional_ww = [s.strip() for s in options.get(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
                     woolworths_stations = set(discount_lists.get("woolworths", []) + additional_ww)
                     if self._station_code in woolworths_stations:
@@ -200,6 +191,15 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                         price -= discount_applied_amount
                         discount_provider = "Woolworths"
 
+                # Check Coles (only if Woolworths discount was not already applied)
+                if discount_provider == "None" and options.get(CONF_ENABLE_COLES_DISCOUNT):
+                    additional_coles = [s.strip() for s in options.get(CONF_COLES_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
+                    coles_stations = set(discount_lists.get("coles", []) + additional_coles)
+                    if self._station_code in coles_stations:
+                        discount_applied_amount = float(options.get(CONF_COLES_DISCOUNT_AMOUNT, 0))
+                        price -= discount_applied_amount
+                        discount_provider = "Coles"
+                
                 # Check RACT (only if no other discount applied)
                 if discount_provider == "None" and options.get(CONF_ENABLE_RACT_DISCOUNT):
                     additional_ract = [s.strip() for s in options.get(CONF_RACT_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
