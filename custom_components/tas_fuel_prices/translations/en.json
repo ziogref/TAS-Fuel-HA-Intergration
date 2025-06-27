@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Tasmanian Fuel Prices: Authentication",
-        "description": "This integration requires a free API Key and Secret from the NSW API portal. Please sign up at:\nhttps://api.nsw.gov.au/Product/Index/22\n\nOnce you have your credentials, enter them below.",
+        "description": "This integration requires a free API Key and Secret from the NSW API portal. Please sign up at:\nhttps://api.nsw.gov.au/Product/Index/22\n\nOnce you have your keys, enter them below.",
         "data": {
           "api_key": "API Key",
           "api_secret": "API Secret"
@@ -12,7 +12,7 @@
       },
       "init_options": {
         "title": "Tasmanian Fuel Prices: General Options",
-        "description": "Select your preferred fuel types to monitor. You can also add up to 5 'Favourite' stations using their station codes to create dedicated sensors for them. Finally, enable any discount programs you use.",
+        "description": "Select one or more preferred fuel types to monitor. You can also add up to 5 'Favourite' stations using their station codes to create dedicated sensors for them. Finally, enable any discount programs you use.",
         "data": {
           "fuel_types": "Fuel Types",
           "stations": "Favourite Stations (up to 5, comma-separated codes)",
