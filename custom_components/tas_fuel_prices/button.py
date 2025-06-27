@@ -19,12 +19,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the button platform."""
     data_bundle = hass.data[DOMAIN][entry.entry_id]
-    coordinator: DataUpdateCoordinator = data_bundle["coordinator"]
+    price_coordinator: DataUpdateCoordinator = data_bundle["price_coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
 
     buttons = [
-        TasFuelRefreshTokenButton(coordinator, api_client),
-        TasFuelRefreshPricesButton(coordinator),
+        TasFuelRefreshTokenButton(price_coordinator, api_client),
+        TasFuelRefreshPricesButton(price_coordinator),
     ]
     async_add_entities(buttons)
 

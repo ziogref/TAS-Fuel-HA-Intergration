@@ -13,10 +13,10 @@ from .const import (
     DOMAIN,
     LOGGER,
     SCAN_INTERVAL,
+    DISCOUNT_DATA_UPDATE_INTERVAL,
     CONF_API_KEY,
     CONF_API_SECRET,
     CONF_DEVICE_NAME,
-    CONF_FUEL_TYPES,
 )
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -25,7 +25,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tasmanian Fuel Prices from a config entry."""
     hass.data.setdefault(DOMAIN, {})
-    
+
     device_registry = dr.async_get(hass)
     # Get the main device entry
     device_registry.async_get_or_create(
@@ -33,7 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
         manufacturer="Custom Integration",
-        model="1.1.0",
+        model="1.2.0", # Version bump
     )
 
     session = async_get_clientsession(hass)
@@ -43,18 +43,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session,
     )
 
-    coordinator = DataUpdateCoordinator(
+    # Coordinator for fetching fuel prices from the API
+    price_coordinator = DataUpdateCoordinator(
         hass,
         LOGGER,
-        name=DOMAIN,
+        name=f"{DOMAIN}_prices",
         update_method=api.fetch_prices,
         update_interval=SCAN_INTERVAL,
     )
 
-    await coordinator.async_config_entry_first_refresh()
+    # Coordinator for fetching discount station lists from GitHub
+    discount_coordinator = DataUpdateCoordinator(
+        hass,
+        LOGGER,
+        name=f"{DOMAIN}_discounts",
+        update_method=api.fetch_discount_station_lists,
+        update_interval=DISCOUNT_DATA_UPDATE_INTERVAL,
+    )
+
+    # Fetch initial data
+    await price_coordinator.async_config_entry_first_refresh()
+    await discount_coordinator.async_config_entry_first_refresh()
+
 
     hass.data[DOMAIN][entry.entry_id] = {
-        "coordinator": coordinator,
+        "price_coordinator": price_coordinator,
+        "discount_coordinator": discount_coordinator,
         "api": api,
     }
 
@@ -71,6 +85,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""

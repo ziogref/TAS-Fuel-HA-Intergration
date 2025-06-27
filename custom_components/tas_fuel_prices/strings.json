@@ -2,19 +2,46 @@
   "config": {
     "step": {
       "user": {
-        "title": "Tasmanian Fuel Prices: Authentication (Step 1/2)",
+        "title": "Tasmanian Fuel Prices: Authentication",
         "description": "Please enter your API Key and Secret from the NSW FuelCheck API portal.",
         "data": {
           "api_key": "API Key",
           "api_secret": "API Secret"
         }
       },
-      "options": {
-        "title": "Tasmanian Fuel Prices: Options (Step 2/2)",
-        "description": "Configure your preferred fuel type and favourite stations.",
+      "init_options": {
+        "title": "Tasmanian Fuel Prices: General Options",
+        "description": "Configure your preferred fuel types, favourite stations, and select which discount programs you want to enable.",
         "data": {
-          "fuel_type": "Fuel Type",
-          "stations": "Favourite Stations (up to 5, comma-separated codes)"
+          "fuel_types": "Fuel Types",
+          "stations": "Favourite Stations (up to 5, comma-separated codes)",
+          "enable_coles_discount": "Enable Coles Discount",
+          "enable_woolworths_discount": "Enable Woolworths Discount",
+          "enable_ract_discount": "Enable RACT Discount"
+        }
+      },
+      "coles_discount": {
+        "title": "Configure Coles Discount",
+        "description": "Enter your Coles discount amount and any additional station codes not in the default list. To contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "coles_discount_amount": "Discount (cents)",
+          "coles_additional_stations": "Additional Station Codes (comma-separated)"
+        }
+      },
+      "woolworths_discount": {
+        "title": "Configure Woolworths Discount",
+        "description": "Enter your Woolworths discount amount and any additional station codes not in the default list. To contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "woolworths_discount_amount": "Discount (cents)",
+          "woolworths_additional_stations": "Additional Station Codes (comma-separated)"
+        }
+      },
+      "ract_discount": {
+        "title": "Configure RACT Discount",
+        "description": "Enter your RACT discount amount and any additional station codes not in the default list. To contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "ract_discount_amount": "Discount (cents)",
+          "ract_additional_stations": "Additional Station Codes (comma-separated)"
         }
       }
     },
@@ -29,11 +56,38 @@
   "options": {
     "step": {
       "init": {
-        "title": "Tasmanian Fuel Prices: Options",
-        "description": "Re-configure your preferred fuel type and favourite stations.",
+        "title": "Tasmanian Fuel Prices: General Options",
+        "description": "Re-configure your preferred fuel types, favourite stations, and select which discount programs you want to enable.",
         "data": {
-          "fuel_type": "Fuel Type",
-          "stations": "Favourite Stations (up to 5, comma-separated codes)"
+          "fuel_types": "Fuel Types",
+          "stations": "Favourite Stations (up to 5, comma-separated codes)",
+          "enable_coles_discount": "Enable Coles Discount",
+          "enable_woolworths_discount": "Enable Woolworths Discount",
+          "enable_ract_discount": "Enable RACT Discount"
+        }
+      },
+      "coles_discount": {
+        "title": "Re-configure Coles Discount",
+        "description": "Enter your Coles discount amount and any additional station codes not in the default list. To contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "coles_discount_amount": "Discount (cents)",
+          "coles_additional_stations": "Additional Station Codes (comma-separated)"
+        }
+      },
+      "woolworths_discount": {
+        "title": "Re-configure Woolworths Discount",
+        "description": "Enter your Woolworths discount amount and any additional station codes not in the default list. To contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "woolworths_discount_amount": "Discount (cents)",
+          "woolworths_additional_stations": "Additional Station Codes (comma-separated)"
+        }
+      },
+      "ract_discount": {
+        "title": "Re-configure RACT Discount",
+        "description": "Enter your RACT discount amount and any additional station codes not in the default list. To contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "ract_discount_amount": "Discount (cents)",
+          "ract_additional_stations": "Additional Station Codes (comma-separated)"
         }
       }
     }
