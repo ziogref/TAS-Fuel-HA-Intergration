@@ -1,3 +1,4 @@
+# **This project is under very active devolpment. Do not install as it may not work or break at any point.**
 # **Tasmanian Fuel Prices Integration for Home Assistant**
 
 This is a custom integration for Home Assistant to monitor fuel prices in Tasmania, using the FuelCheck TAS API.
