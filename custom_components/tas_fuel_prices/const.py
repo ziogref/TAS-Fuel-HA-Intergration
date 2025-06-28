@@ -17,6 +17,8 @@ ATTR_ADDRESS = "address"
 ATTR_BRAND = "brand"
 ATTR_DISCOUNT_APPLIED = "discount_applied"
 ATTR_DISCOUNT_PROVIDER = "discount_provider"
+ATTR_USER_FAVOURITE = "user_favourite"
+ATTR_TYRE_INFLATION = "tyre_inflation"
 
 
 # API Configuration

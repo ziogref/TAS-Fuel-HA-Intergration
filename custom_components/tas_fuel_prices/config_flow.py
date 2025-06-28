@@ -36,7 +36,7 @@ FUEL_TYPES_OPTIONS = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LP
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
-    VERSION = 4
+    VERSION = 5
     data: dict[str, Any] = {}
     options: dict[str, Any] = {}
 
@@ -82,7 +82,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 s.strip() for s in stations_str.split(",") if s.strip().isdigit()
             ]
             self.options.update(user_input)
-            self.options[CONF_STATIONS] = stations_list[:5]
+            self.options[CONF_STATIONS] = stations_list # Removed limit
 
             # Check which discount providers were selected and move to the next step
             if self.options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
@@ -183,7 +183,7 @@ class OptionsFlowHandler(OptionsFlow):
                 s.strip() for s in stations_str.split(",") if s.strip().isdigit()
             ]
             self.options.update(user_input)
-            self.options[CONF_STATIONS] = stations_list[:5]
+            self.options[CONF_STATIONS] = stations_list # Removed limit
 
             # Proceed to discount steps if selected
             if self.options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
