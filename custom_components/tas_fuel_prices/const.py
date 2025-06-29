@@ -62,6 +62,7 @@ CONF_REMOVE_TYRE_INFLATION_STATIONS = "remove_tyre_inflation_stations"
 
 # Select Entity
 SELECT_FUEL_TYPE_ENTITY_NAME = "Fuel Type Selector"
+<<<<<<< HEAD
 FUEL_TYPE_ORDER = [
     "E10",
     "U91",
@@ -73,6 +74,8 @@ FUEL_TYPE_ORDER = [
     "B20",
     "LPG",
 ]
+=======
+>>>>>>> ccdb01e61e15732874655730bc88268bba1cb377
 
 
 # Update intervals
