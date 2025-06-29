@@ -52,9 +52,9 @@ cards:
       show_header_toggle: false
     filter:
       include:
-        - attributes:
-            'User favourite': true
         - entity_id: '*_u91'
+          attributes:
+            user_favourite: true
     sort:
       method: state
       numeric: true
@@ -64,15 +64,10 @@ cards:
       show_header_toggle: false
     filter:
       include:
-        - domain: sensor
-          # This selects all sensors for a specific fuel type.
-          # Change 'u91' to your desired fuel type (e.g., 'p98', 'dl').
-          entity_id: '*_u91'
+        - entity_id: '*_u91'
       exclude:
-        # Exclude stations that are already in the favourites list.
         - attributes:
-            'User favourite': true
-        # Exclude a specific brand.
+            user_favourite: true
         - attributes:
             brand: United
     sort:
@@ -89,18 +84,15 @@ cards:
 
 #### Card 1: Your Favourites (Dynamic)
 
-* **`type: custom:auto-entities`**: This card now dynamically finds your favourites.
-* **`filter:`**: It includes any sensor for the specified fuel type (`*_u91`) that has the `'User favourite': true` attribute. Note the quotes around the attribute name, which are required because of the space.
-* **`sort: { method: state, numeric: true }`**: This now sorts your favourites by price (cheapest first) for a consistent and useful order.
+* **`filter:`**: 
+    * **`include:`**: This uses the standard filter syntax. Placing `entity_id` and `attributes` in the same list item creates an **AND** condition. It will only include sensors that match the `entity_id` glob **AND** have the attribute `user_favourite: true`.
+* **`sort: { method: state, numeric: true }`**: Sorts your favourites by price (cheapest first).
 
 #### Card 2: The Main List (Dynamic)
 
-* **`type: custom:auto-entities`**: This card populates the rest of the list.
-* **`filter:`**: 
-    * **`include:`**: It grabs all sensors for the specified fuel type (e.g., `*_u91`). **You must change this** to match the fuel type you want to display.
-    * **`exclude:`**: It removes any sensor where `'User favourite'` is `true` (to prevent duplicates) and any sensor from an excluded brand (like "United").
-* **`sort:`**:
-    * `method: state`: This sorts the list based on the fuel price.
-    * `numeric: true`: This ensures prices are sorted correctly as numbers.
+* **`filter:`**:
+    * **`include:`**: This first grabs all sensors matching the `entity_id` glob (e.g., `*_u91`). **You must change this** to match the fuel type you want to display.
+    * **`exclude:`**: This then removes entities from the list. We have two separate rules: one removes any sensor with `user_favourite: true`, and the other removes any sensor where the `brand` is "United".
+* **`sort:`**: This sorts the remaining list by price.
 
-After pasting the YAML, click "**SAVE**". Your card will now automatically display your favourites at the top, sorted by price, followed by a dynamically sorted list of all other stations.
+After pasting the YAML, click "**SAVE**". This non-template version is cleaner and should now work as intended.

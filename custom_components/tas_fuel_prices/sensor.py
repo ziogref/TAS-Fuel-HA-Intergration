@@ -86,7 +86,7 @@ async def async_setup_entry(
 
 class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Tasmanian Fuel Price sensor."""
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     def __init__(
         self,
