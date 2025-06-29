@@ -60,6 +60,20 @@ CONF_RACT_ADDITIONAL_STATIONS = "ract_additional_stations"
 CONF_ADD_TYRE_INFLATION_STATIONS = "add_tyre_inflation_stations"
 CONF_REMOVE_TYRE_INFLATION_STATIONS = "remove_tyre_inflation_stations"
 
+# Select Entity
+SELECT_FUEL_TYPE_ENTITY_NAME = "Fuel Type Selector"
+FUEL_TYPE_ORDER = [
+    "E10",
+    "U91",
+    "P95",
+    "P98",
+    "E85",
+    "DL",
+    "PDL",
+    "B20",
+    "LPG",
+]
+
 
 # Update intervals
 SCAN_INTERVAL = timedelta(hours=1)
