@@ -5,9 +5,10 @@
 This guide will show you how to create a single Lovelace card that displays:
 
 1.  An automatically populated list of your "Favourite" fuel stations at the top, sorted by price.
-2.  A dynamic list of all other fuel stations, also automatically sorted from cheapest to most expensive.
-3.  The ability to exclude specific brands (e.g., United) from the dynamic list.
-4.  The card will automatically hide any station whose price is currently "Unknown".
+2.  A clear heading to separate your favourites from other stations.
+3.  A dynamic list of all other fuel stations, also automatically sorted from cheapest to most expensive.
+4.  The ability to exclude specific brands (e.g., United) from the dynamic list.
+5.  The card will automatically hide any station whose price is currently "Unknown".
 
 ---
 
@@ -64,6 +65,7 @@ cards:
   - type: custom:auto-entities
     card:
       type: entities
+      title: '⛽ All Other Stations'
       show_header_toggle: false
     filter:
       include:
@@ -90,14 +92,15 @@ cards:
 
 * **`filter:`**: 
     * **`include:`**: This finds all sensors that match the `entity_id` glob (e.g., `*_u91`) AND have the attribute `user_favourite: true`.
-    * **`exclude:`**: This filter now removes entities from the list if their `state` is exactly the string `'unknown'`.
+    * **`exclude:`**: This filter removes entities from the list if their `state` is exactly the string `'unknown'`.
 * **`sort: { method: state, numeric: true }`**: Sorts your favourites by price (cheapest first).
 
 #### Card 2: The Main List (Dynamic)
 
+* **`card: { title: '⛽ All Other Stations' }`**: This is the key change. By adding an emoji to the `title` of the inner `entities` card, we create a clean heading that separates the favourites from the rest of the list.
 * **`filter:`**:
     * **`include:`**: This first grabs all sensors matching the `entity_id` glob.
     * **`exclude:`**: This removes sensors that are favourites, belong to an excluded brand, or have a state of `'unknown'`.
 * **`sort:`**: This sorts the remaining list by price.
 
-After pasting the YAML, click "**SAVE**". This should now behave exactly as expected.
+After pasting the YAML, click "**SAVE**". This should now behave exactly as expected, with a clear separation and themed headings for the two lists.
