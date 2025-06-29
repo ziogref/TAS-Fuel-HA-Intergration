@@ -7,6 +7,7 @@ This guide will show you how to create a single Lovelace card that displays:
 1.  An automatically populated list of your "Favourite" fuel stations at the top, sorted by price.
 2.  A dynamic list of all other fuel stations, also automatically sorted from cheapest to most expensive.
 3.  The ability to exclude specific brands (e.g., United) from the dynamic list.
+4.  The card will automatically hide any station whose price is currently "Unknown".
 
 ---
 
@@ -55,6 +56,8 @@ cards:
         - entity_id: '*_u91'
           attributes:
             user_favourite: true
+      exclude:
+        - state: 'unknown'
     sort:
       method: state
       numeric: true
@@ -70,6 +73,7 @@ cards:
             user_favourite: true
         - attributes:
             brand: United
+        - state: 'unknown'
     sort:
       method: state
       numeric: true
@@ -85,14 +89,15 @@ cards:
 #### Card 1: Your Favourites (Dynamic)
 
 * **`filter:`**: 
-    * **`include:`**: This uses the standard filter syntax. Placing `entity_id` and `attributes` in the same list item creates an **AND** condition. It will only include sensors that match the `entity_id` glob **AND** have the attribute `user_favourite: true`.
+    * **`include:`**: This finds all sensors that match the `entity_id` glob (e.g., `*_u91`) AND have the attribute `user_favourite: true`.
+    * **`exclude:`**: This filter now removes entities from the list if their `state` is exactly the string `'unknown'`.
 * **`sort: { method: state, numeric: true }`**: Sorts your favourites by price (cheapest first).
 
 #### Card 2: The Main List (Dynamic)
 
 * **`filter:`**:
-    * **`include:`**: This first grabs all sensors matching the `entity_id` glob (e.g., `*_u91`). **You must change this** to match the fuel type you want to display.
-    * **`exclude:`**: This then removes entities from the list. We have two separate rules: one removes any sensor with `user_favourite: true`, and the other removes any sensor where the `brand` is "United".
+    * **`include:`**: This first grabs all sensors matching the `entity_id` glob.
+    * **`exclude:`**: This removes sensors that are favourites, belong to an excluded brand, or have a state of `'unknown'`.
 * **`sort:`**: This sorts the remaining list by price.
 
-After pasting the YAML, click "**SAVE**". This non-template version is cleaner and should now work as intended.
+After pasting the YAML, click "**SAVE**". This should now behave exactly as expected.
