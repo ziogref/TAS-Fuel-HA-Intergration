@@ -121,7 +121,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
-            vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=4): int,
+            vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=6): int,
             vol.Optional(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, default=""): str,
         })
         return self.async_show_form(step_id="woolworths_discount", data_schema=schema)
@@ -230,7 +230,7 @@ class OptionsFlowHandler(OptionsFlow):
             return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
-            vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=self.options.get(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, 4)): int,
+            vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=self.options.get(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, 6)): int,
             vol.Optional(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, description={"suggested_value": self.options.get(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, "")}): str,
         })
         return self.async_show_form(step_id="woolworths_discount", data_schema=schema)

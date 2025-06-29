@@ -46,8 +46,8 @@
         }
       },
       "tyre_inflation": {
-        "title": "Configure Tyre Inflation",
-        "description": "You can manually override the community-sourced list of stations with tyre inflation facilities. Add stations that are missing, or remove stations where the facility is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "title": "Optional: Tyre Inflation Adjustments",
+        "description": "This page is optional. If you don't know what to do, leave the fields blank and click submit.\n\nYou can use this to correct the community-sourced list of stations with tyre inflation. For example, add a station that has a new machine, or remove a station where the machine is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
@@ -76,7 +76,7 @@
         }
       },
       "woolworths_discount": {
-        "title": "Re-configure Woolworths Discount",
+        "title": "Woolworths Discount Settings",
         "description": "Enter your Woolworths discount amount as a whole number (e.g., 4 for 4 cents). You can also add station codes for participating locations not in the default list.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "woolworths_discount_amount": "Discount (cents)",
@@ -84,7 +84,7 @@
         }
       },
       "coles_discount": {
-        "title": "Re-configure Coles Discount",
+        "title": "Coles Discount Settings",
         "description": "Enter your Coles discount amount as a whole number (e.g., 4 for 4 cents). You can also add station codes for participating locations not in the default list.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "coles_discount_amount": "Discount (cents)",
@@ -92,7 +92,7 @@
         }
       },
       "ract_discount": {
-        "title": "Re-configure RACT Discount",
+        "title": "RACT Discount Settings",
         "description": "Enter your RACT discount amount as a whole number (e.g., 6 for 6 cents). You can also add station codes for participating locations not in the default list.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "ract_discount_amount": "Discount (cents)",
@@ -100,8 +100,8 @@
         }
       },
       "tyre_inflation": {
-        "title": "Re-configure Tyre Inflation",
-        "description": "You can manually override the community-sourced list of stations with tyre inflation facilities. Add stations that are missing, or remove stations where the facility is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "title": "Optional: Tyre Inflation Adjustments",
+        "description": "This page is optional. If you don't know what to do, leave the fields blank and click submit.\n\nYou can use this to correct the community-sourced list of stations with tyre inflation. For example, add a station that has a new machine, or remove a station where the machine is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
