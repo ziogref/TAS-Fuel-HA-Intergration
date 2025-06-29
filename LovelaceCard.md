@@ -4,8 +4,8 @@
 
 This guide will show you how to create a single Lovelace card that displays:
 
-1.  An automatically populated list of your "Favourite" fuel stations at the top.
-2.  A dynamic list of all other fuel stations, automatically sorted from cheapest to most expensive.
+1.  An automatically populated list of your "Favourite" fuel stations at the top, sorted by price.
+2.  A dynamic list of all other fuel stations, also automatically sorted from cheapest to most expensive.
 3.  The ability to exclude specific brands (e.g., United) from the dynamic list.
 
 ---
@@ -53,10 +53,11 @@ cards:
     filter:
       include:
         - attributes:
-            user_favourite: true
+            'User favourite': true
         - entity_id: '*_u91'
     sort:
-      method: name
+      method: state
+      numeric: true
   - type: custom:auto-entities
     card:
       type: entities
@@ -70,7 +71,7 @@ cards:
       exclude:
         # Exclude stations that are already in the favourites list.
         - attributes:
-            user_favourite: true
+            'User favourite': true
         # Exclude a specific brand.
         - attributes:
             brand: United
@@ -89,17 +90,17 @@ cards:
 #### Card 1: Your Favourites (Dynamic)
 
 * **`type: custom:auto-entities`**: This card now dynamically finds your favourites.
-* **`filter:`**: It includes any sensor for the specified fuel type (`*_u91`) that has the `user_favourite: true` attribute. This means you no longer need to edit this list manually.
-* **`sort: { method: name }`**: This sorts your favourites alphabetically by name for a consistent order.
+* **`filter:`**: It includes any sensor for the specified fuel type (`*_u91`) that has the `'User favourite': true` attribute. Note the quotes around the attribute name, which are required because of the space.
+* **`sort: { method: state, numeric: true }`**: This now sorts your favourites by price (cheapest first) for a consistent and useful order.
 
 #### Card 2: The Main List (Dynamic)
 
 * **`type: custom:auto-entities`**: This card populates the rest of the list.
 * **`filter:`**: 
     * **`include:`**: It grabs all sensors for the specified fuel type (e.g., `*_u91`). **You must change this** to match the fuel type you want to display.
-    * **`exclude:`**: It removes any sensor where `user_favourite` is `true` (to prevent duplicates) and any sensor from an excluded brand (like "United").
+    * **`exclude:`**: It removes any sensor where `'User favourite'` is `true` (to prevent duplicates) and any sensor from an excluded brand (like "United").
 * **`sort:`**:
     * `method: state`: This sorts the list based on the fuel price.
     * `numeric: true`: This ensures prices are sorted correctly as numbers.
 
-After pasting the YAML, click "**SAVE**". Your card will now automatically display your favourites at the top, followed by a dynamically sorted list of all other stations.
+After pasting the YAML, click "**SAVE**". Your card will now automatically display your favourites at the top, sorted by price, followed by a dynamically sorted list of all other stations.
