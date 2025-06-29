@@ -39,6 +39,8 @@ from .const import (
     CONF_ENABLE_RACT_DISCOUNT,
     CONF_RACT_DISCOUNT_AMOUNT,
     CONF_RACT_ADDITIONAL_STATIONS,
+    CONF_ADD_TYRE_INFLATION_STATIONS,
+    CONF_REMOVE_TYRE_INFLATION_STATIONS,
 )
 
 async def async_setup_entry(
@@ -49,7 +51,7 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     data_bundle = hass.data[DOMAIN][entry.entry_id]
     price_coordinator: DataUpdateCoordinator = data_bundle["price_coordinator"]
-    discount_coordinator: DataUpdateCoordinator = data_bundle["discount_coordinator"]
+    additional_data_coordinator: DataUpdateCoordinator = data_bundle["additional_data_coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
     
     fuel_types = entry.options.get(CONF_FUEL_TYPES, ["U91"])
@@ -69,7 +71,7 @@ async def async_setup_entry(
                 sensors.append(
                     TasFuelPriceSensor(
                         price_coordinator=price_coordinator,
-                        discount_coordinator=discount_coordinator,
+                        additional_data_coordinator=additional_data_coordinator,
                         entry=entry,
                         station_code=station_code,
                         station_name=station_info.get("name", f"Station {station_code}"),
@@ -89,7 +91,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     def __init__(
         self,
         price_coordinator: DataUpdateCoordinator,
-        discount_coordinator: DataUpdateCoordinator,
+        additional_data_coordinator: DataUpdateCoordinator,
         entry: ConfigEntry,
         station_code: str,
         station_name: str,
@@ -99,7 +101,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     ) -> None:
         """Initialize the sensor."""
         super().__init__(price_coordinator)
-        self.discount_coordinator = discount_coordinator
+        self.additional_data_coordinator = additional_data_coordinator
         self.entry = entry
         self._station_code = station_code
         self._fuel_type = fuel_type
@@ -152,15 +154,17 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             price = float(price_info.get('price'))
             discount_applied_amount = 0.0
             discount_provider = "None"
+            tyre_inflation = False
+            options = self.entry.options
 
-            # Check for and apply discounts
-            if self.discount_coordinator.data:
-                options = self.entry.options
-                discount_lists = self.discount_coordinator.data
+            # Check for and apply discounts and amenities
+            if self.additional_data_coordinator.data:
+                additional_data = self.additional_data_coordinator.data
 
+                # Discounts
                 if options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
                     additional_ww = [s.strip() for s in options.get(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
-                    woolworths_stations = set(discount_lists.get("woolworths", []) + additional_ww)
+                    woolworths_stations = set(additional_data.get("woolworths", []) + additional_ww)
                     if self._station_code in woolworths_stations:
                         discount_applied_amount = float(options.get(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, 0))
                         price -= discount_applied_amount
@@ -168,7 +172,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
 
                 if discount_provider == "None" and options.get(CONF_ENABLE_COLES_DISCOUNT):
                     additional_coles = [s.strip() for s in options.get(CONF_COLES_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
-                    coles_stations = set(discount_lists.get("coles", []) + additional_coles)
+                    coles_stations = set(additional_data.get("coles", []) + additional_coles)
                     if self._station_code in coles_stations:
                         discount_applied_amount = float(options.get(CONF_COLES_DISCOUNT_AMOUNT, 0))
                         price -= discount_applied_amount
@@ -176,11 +180,22 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 
                 if discount_provider == "None" and options.get(CONF_ENABLE_RACT_DISCOUNT):
                     additional_ract = [s.strip() for s in options.get(CONF_RACT_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
-                    ract_stations = set(discount_lists.get("ract", []) + additional_ract)
+                    ract_stations = set(additional_data.get("ract", []) + additional_ract)
                     if self._station_code in ract_stations:
                         discount_applied_amount = float(options.get(CONF_RACT_DISCOUNT_AMOUNT, 0))
                         price -= discount_applied_amount
                         discount_provider = "RACT"
+                
+                # Tyre Inflation
+                github_list = set(additional_data.get("tyre_inflation", []))
+                add_list = {s.strip() for s in options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
+                remove_list = {s.strip() for s in options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
+
+                if self._station_code in add_list:
+                    tyre_inflation = True
+                elif self._station_code in github_list and self._station_code not in remove_list:
+                    tyre_inflation = True
+
 
             self._attr_native_value = round(price / 100.0, 3)
             
@@ -220,7 +235,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_DISCOUNT_APPLIED: round(discount_applied_amount / 100.0, 3),
                 ATTR_DISCOUNT_PROVIDER: discount_provider,
                 ATTR_USER_FAVOURITE: is_favourite,
-                ATTR_TYRE_INFLATION: False, # Placeholder
+                ATTR_TYRE_INFLATION: tyre_inflation,
             }
             self._attr_extra_state_attributes = attributes
         else:

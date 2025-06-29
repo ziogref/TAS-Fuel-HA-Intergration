@@ -15,6 +15,7 @@ from .const import (
     COLES_DISCOUNT_URL,
     WOOLWORTHS_DISCOUNT_URL,
     RACT_DISCOUNT_URL,
+    TYRE_INFLATION_URL,
 )
 
 
@@ -142,14 +143,15 @@ class TasFuelAPI:
         self._token_expiry = None
 
     @backoff.on_exception(backoff.expo, ClientError, max_tries=3, logger=LOGGER)
-    async def fetch_discount_station_lists(self) -> dict:
-        """Fetch the lists of station codes for each discount provider from GitHub."""
-        LOGGER.info("Fetching discount station lists from GitHub.")
-        discount_data = {}
+    async def fetch_additional_data_lists(self) -> dict:
+        """Fetch the lists of station codes for discounts and amenities from GitHub."""
+        LOGGER.info("Fetching additional data lists from GitHub.")
+        additional_data = {}
         urls = {
             "coles": COLES_DISCOUNT_URL,
             "woolworths": WOOLWORTHS_DISCOUNT_URL,
             "ract": RACT_DISCOUNT_URL,
+            "tyre_inflation": TYRE_INFLATION_URL,
         }
 
         for provider, url in urls.items():
@@ -159,11 +161,11 @@ class TasFuelAPI:
                 text = await response.text()
                 # Get station codes from text file, filter out empty lines
                 station_codes = {line.strip() for line in text.splitlines() if line.strip()}
-                discount_data[provider] = list(station_codes)
+                additional_data[provider] = list(station_codes)
                 LOGGER.debug("Successfully fetched %s station codes for %s", len(station_codes), provider)
             except ClientError as e:
-                LOGGER.error("Error fetching discount list for %s: %s", provider, e)
+                LOGGER.error("Error fetching additional data list for %s: %s", provider, e)
                 # If a list fails to download, provide an empty list to prevent errors
-                discount_data[provider] = []
+                additional_data[provider] = []
         
-        return discount_data
+        return additional_data

@@ -13,7 +13,7 @@ from .const import (
     DOMAIN,
     LOGGER,
     SCAN_INTERVAL,
-    DISCOUNT_DATA_UPDATE_INTERVAL,
+    ADDITIONAL_DATA_UPDATE_INTERVAL,
     CONF_API_KEY,
     CONF_API_SECRET,
     CONF_DEVICE_NAME,
@@ -33,7 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
         manufacturer="Custom Integration",
-        model="1.2.0", # Version bump
+        model="1.3.0", # Version bump
     )
 
     session = async_get_clientsession(hass)
@@ -52,23 +52,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SCAN_INTERVAL,
     )
 
-    # Coordinator for fetching discount station lists from GitHub
-    discount_coordinator = DataUpdateCoordinator(
+    # Coordinator for fetching discount/amenity station lists from GitHub
+    additional_data_coordinator = DataUpdateCoordinator(
         hass,
         LOGGER,
-        name=f"{DOMAIN}_discounts",
-        update_method=api.fetch_discount_station_lists,
-        update_interval=DISCOUNT_DATA_UPDATE_INTERVAL,
+        name=f"{DOMAIN}_additional_data",
+        update_method=api.fetch_additional_data_lists,
+        update_interval=ADDITIONAL_DATA_UPDATE_INTERVAL,
     )
 
     # Fetch initial data
     await price_coordinator.async_config_entry_first_refresh()
-    await discount_coordinator.async_config_entry_first_refresh()
+    await additional_data_coordinator.async_config_entry_first_refresh()
 
 
     hass.data[DOMAIN][entry.entry_id] = {
         "price_coordinator": price_coordinator,
-        "discount_coordinator": discount_coordinator,
+        "additional_data_coordinator": additional_data_coordinator,
         "api": api,
     }
 

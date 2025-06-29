@@ -27,6 +27,8 @@ from .const import (
     CONF_COLES_ADDITIONAL_STATIONS,
     CONF_RACT_DISCOUNT_AMOUNT,
     CONF_RACT_ADDITIONAL_STATIONS,
+    CONF_ADD_TYRE_INFLATION_STATIONS,
+    CONF_REMOVE_TYRE_INFLATION_STATIONS,
 )
 from .api import TasFuelAPI
 
@@ -36,7 +38,7 @@ FUEL_TYPES_OPTIONS = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LP
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
-    VERSION = 5
+    VERSION = 6
     data: dict[str, Any] = {}
     options: dict[str, Any] = {}
 
@@ -82,9 +84,8 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 s.strip() for s in stations_str.split(",") if s.strip().isdigit()
             ]
             self.options.update(user_input)
-            self.options[CONF_STATIONS] = stations_list # Removed limit
+            self.options[CONF_STATIONS] = stations_list
 
-            # Check which discount providers were selected and move to the next step
             if self.options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
                 return await self.async_step_woolworths_discount()
             if self.options.get(CONF_ENABLE_COLES_DISCOUNT):
@@ -92,9 +93,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
 
-            return self.async_create_entry(
-                title="Tasmanian Fuel Prices", data=self.data, options=self.options
-            )
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema(
             {
@@ -119,7 +118,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
             vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=4): int,
@@ -135,7 +134,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             self.options.update(user_input)
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
             vol.Required(CONF_COLES_DISCOUNT_AMOUNT, default=4): int,
@@ -149,7 +148,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle RACT discount options."""
         if user_input is not None:
             self.options.update(user_input)
-            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
             vol.Required(CONF_RACT_DISCOUNT_AMOUNT, default=6): int,
@@ -157,6 +156,19 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         })
         return self.async_show_form(step_id="ract_discount", data_schema=schema)
 
+    async def async_step_tyre_inflation(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle Tyre Inflation override options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, default=""): str,
+            vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, default=""): str,
+        })
+        return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
 
     @staticmethod
     @callback
@@ -183,9 +195,8 @@ class OptionsFlowHandler(OptionsFlow):
                 s.strip() for s in stations_str.split(",") if s.strip().isdigit()
             ]
             self.options.update(user_input)
-            self.options[CONF_STATIONS] = stations_list # Removed limit
+            self.options[CONF_STATIONS] = stations_list
 
-            # Proceed to discount steps if selected
             if self.options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
                 return await self.async_step_woolworths_discount()
             if self.options.get(CONF_ENABLE_COLES_DISCOUNT):
@@ -193,7 +204,7 @@ class OptionsFlowHandler(OptionsFlow):
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
             
-            return self.async_create_entry(title="", data=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
                 vol.Required(CONF_FUEL_TYPES, default=self.options.get(CONF_FUEL_TYPES, ["U91"])): cv.multi_select(
@@ -216,7 +227,7 @@ class OptionsFlowHandler(OptionsFlow):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return self.async_create_entry(title="", data=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
             vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=self.options.get(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, 4)): int,
@@ -232,7 +243,7 @@ class OptionsFlowHandler(OptionsFlow):
             self.options.update(user_input)
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return self.async_create_entry(title="", data=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
             vol.Required(CONF_COLES_DISCOUNT_AMOUNT, default=self.options.get(CONF_COLES_DISCOUNT_AMOUNT, 4)): int,
@@ -246,10 +257,24 @@ class OptionsFlowHandler(OptionsFlow):
         """Handle RACT discount options for re-configuration."""
         if user_input is not None:
             self.options.update(user_input)
-            return self.async_create_entry(title="", data=self.options)
+            return await self.async_step_tyre_inflation()
 
         schema = vol.Schema({
             vol.Required(CONF_RACT_DISCOUNT_AMOUNT, default=self.options.get(CONF_RACT_DISCOUNT_AMOUNT, 6)): int,
             vol.Optional(CONF_RACT_ADDITIONAL_STATIONS, description={"suggested_value": self.options.get(CONF_RACT_ADDITIONAL_STATIONS, "")}): str,
         })
         return self.async_show_form(step_id="ract_discount", data_schema=schema)
+
+    async def async_step_tyre_inflation(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle Tyre Inflation override options for re-configuration."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return self.async_create_entry(title="", data=self.options)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "")}): str,
+            vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "")}): str,
+        })
+        return self.async_show_form(step_id="tyre_inflation", data_schema=schema)

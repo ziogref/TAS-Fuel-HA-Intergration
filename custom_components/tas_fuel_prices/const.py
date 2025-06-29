@@ -29,11 +29,12 @@ API_HEADERS = {
     "Content-Type": "application/json; charset=utf-8",
 }
 
-# Discount Data URLs from external repo
-BASE_DISCOUNT_URL = "https://raw.githubusercontent.com/ziogref/TAS-Fuel-HA-Additional-Data/main/Fuel-Discount/"
-WOOLWORTHS_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}Woolworths.txt"
-COLES_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}Coles.txt"
-RACT_DISCOUNT_URL = f"{BASE_DISCOUNT_URL}RACT.txt"
+# Additional Data URLs from external repo
+BASE_DATA_URL = "https://raw.githubusercontent.com/ziogref/TAS-Fuel-HA-Additional-Data/main/"
+WOOLWORTHS_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/Woolworths.txt"
+COLES_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/Coles.txt"
+RACT_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/RACT.txt"
+TYRE_INFLATION_URL = f"{BASE_DATA_URL}Tyre-Inflation/Sites.txt"
 
 
 # Configuration from UI
@@ -55,7 +56,11 @@ CONF_COLES_ADDITIONAL_STATIONS = "coles_additional_stations"
 CONF_RACT_DISCOUNT_AMOUNT = "ract_discount_amount"
 CONF_RACT_ADDITIONAL_STATIONS = "ract_additional_stations"
 
+# Tyre Inflation Configuration
+CONF_ADD_TYRE_INFLATION_STATIONS = "add_tyre_inflation_stations"
+CONF_REMOVE_TYRE_INFLATION_STATIONS = "remove_tyre_inflation_stations"
+
 
 # Update intervals
 SCAN_INTERVAL = timedelta(hours=1)
-DISCOUNT_DATA_UPDATE_INTERVAL = timedelta(days=1)
+ADDITIONAL_DATA_UPDATE_INTERVAL = timedelta(days=1)

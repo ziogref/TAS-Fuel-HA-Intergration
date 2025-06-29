@@ -12,10 +12,10 @@
       },
       "init_options": {
         "title": "Tasmanian Fuel Prices: General Options",
-        "description": "Select one or more preferred fuel types to monitor. You can also add up to 5 'Favourite' stations using their station codes to create dedicated sensors for them. Finally, enable any discount programs you use.",
+        "description": "Select one or more preferred fuel types to monitor. You can also add 'Favourite' stations using their station codes to create dedicated sensors for them. Finally, enable any discount programs you use.",
         "data": {
           "fuel_types": "Fuel Types",
-          "stations": "Favourite Stations (up to 5, comma-separated codes)",
+          "stations": "Favourite Stations (comma-separated codes)",
           "enable_woolworths_discount": "Enable Woolworths Discount",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_ract_discount": "Enable RACT Discount"
@@ -44,6 +44,14 @@
           "ract_discount_amount": "Discount (cents)",
           "ract_additional_stations": "Additional Station Codes (comma-separated)"
         }
+      },
+      "tyre_inflation": {
+        "title": "Configure Tyre Inflation",
+        "description": "You can manually override the community-sourced list of stations with tyre inflation facilities. Add stations that are missing, or remove stations where the facility is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
+          "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
+        }
       }
     },
     "error": {
@@ -61,7 +69,7 @@
         "description": "Re-configure your preferred fuel types, favourite stations, and select which discount programs you want to enable.",
         "data": {
           "fuel_types": "Fuel Types",
-          "stations": "Favourite Stations (up to 5, comma-separated codes)",
+          "stations": "Favourite Stations (comma-separated codes)",
           "enable_woolworths_discount": "Enable Woolworths Discount",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_ract_discount": "Enable RACT Discount"
@@ -89,6 +97,14 @@
         "data": {
           "ract_discount_amount": "Discount (cents)",
           "ract_additional_stations": "Additional Station Codes (comma-separated)"
+        }
+      },
+      "tyre_inflation": {
+        "title": "Re-configure Tyre Inflation",
+        "description": "You can manually override the community-sourced list of stations with tyre inflation facilities. Add stations that are missing, or remove stations where the facility is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
+          "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
         }
       }
     }
