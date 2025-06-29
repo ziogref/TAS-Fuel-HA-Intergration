@@ -1,20 +1,20 @@
-# Guide: Dynamic Fuel Price Lovelace Card
+# Guide: Interactive Fuel Price Card with Dropdown
 
 ### Objective
 
-This guide will show you how to create a single Lovelace card that displays:
+This guide will show you how to create a single, powerful Lovelace card that:
 
-1.  An automatically populated list of your "Favourite" fuel stations at the top, sorted by price.
-2.  A clear heading to separate your favourites from other stations.
-3.  A dynamic list of all other fuel stations, also automatically sorted from cheapest to most expensive.
-4.  The ability to exclude specific brands (e.g., United) from the dynamic list.
-5.  The card will automatically hide any station whose price is currently "Unknown".
+1.  Displays a dropdown menu (created automatically by the integration) to select the fuel type you want to view.
+2.  Based on your selection, automatically populates a list of your "Favourite" fuel stations, sorted by price.
+3.  Displays a dynamic list of all other stations for the selected fuel type, also sorted by price.
+4.  Allows you to exclude specific brands from the dynamic list.
+5.  Automatically hides any station whose price is currently "Unknown".
 
 ---
 
-### Part 1: Prerequisites
+### Part 1: Prerequisites (Custom Cards)
 
-This card requires two custom frontend components from the Home Assistant Community Store (HACS).
+This card requires two custom frontend components from the Home Assistant Community Store (HACS). The dropdown selector is now created automatically by the integration, so you no longer need to create a helper manually.
 
 1.  **Install HACS:** If you haven't already, install [HACS](https://hacs.xyz/) in your Home Assistant instance.
 2.  **Install Required Cards via HACS:**
@@ -30,8 +30,6 @@ This card requires two custom frontend components from the Home Assistant Commun
 
 ### Part 2: Creating the Lovelace Card
 
-We will use the `vertical-stack-in-card` to combine two different cards into a single, seamless element on your dashboard.
-
 1.  Navigate to the dashboard where you want to add the card and click the three dots in the top right, then select "**Edit Dashboard**".
 2.  Click the "**+ ADD CARD**" button.
 3.  Scroll to the bottom of the list and select the "**Manual**" card.
@@ -41,24 +39,28 @@ We will use the `vertical-stack-in-card` to combine two different cards into a s
 
 ### Part 3: The YAML Code
 
-Copy the entire code block below and paste it into the Manual card editor. Explanations for each section are provided below the code.
+Copy the entire code block below and paste it into the Manual card editor.
 
 ```yaml
 type: custom:vertical-stack-in-card
-title: Unleaded 91 Prices
 cards:
+  - type: entities
+    entities:
+      - entity: select.tasmanian_fuel_prices_fuel_type_selector
+        name: Select Fuel Type
   - type: custom:auto-entities
     card:
       type: entities
       title: '⭐ My Favourites'
       show_header_toggle: false
     filter:
-      include:
-        - entity_id: '*_u91'
-          attributes:
-            user_favourite: true
-      exclude:
-        - state: 'unknown'
+      template: |
+        {% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}
+        {% for state in states.sensor %}
+          {% if state.entity_id.endswith('_' + selected_fuel.lower()) and state.attributes.get('user_favourite') == true and state.state != 'unknown' %}
+            {{ state.entity_id }},
+          {% endif %}
+        {% endfor %}
     sort:
       method: state
       numeric: true
@@ -68,14 +70,13 @@ cards:
       title: '⛽ All Other Stations'
       show_header_toggle: false
     filter:
-      include:
-        - entity_id: '*_u91'
-      exclude:
-        - attributes:
-            user_favourite: true
-        - attributes:
-            brand: United
-        - state: 'unknown'
+      template: |
+        {% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}
+        {% for state in states.sensor %}
+          {% if state.entity_id.endswith('_' + selected_fuel.lower()) and state.attributes.get('user_favourite') == false and state.attributes.get('brand') != 'United' and state.state != 'unknown' %}
+            {{ state.entity_id }},
+          {% endif %}
+        {% endfor %}
     sort:
       method: state
       numeric: true
@@ -83,24 +84,11 @@ cards:
 
 ---
 
-### How This Code Works
+### Part 4: How This Code Works
 
-* **`type: custom:vertical-stack-in-card`**: This is the container that holds our two cards and makes them look like a single element.
-* **`title: Unleaded 91 Prices`**: The main title for the entire card. You can change this to whatever you like.
+* **Top Card (Input Select):** The first card in the stack displays the `select.tasmanian_fuel_prices_fuel_type_selector` entity, which is now automatically created by the integration.
+* **Template Filtering:**
+    * `{% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}`: This line gets the currently selected value from the auto-created dropdown.
+    * `state.entity_id.endswith('_' + selected_fuel.lower())`: The template now uses this `selected_fuel` variable to dynamically filter the sensors. We use `.lower()` to ensure the match works correctly even if the case is different. When you change the dropdown, the `auto-entities` card automatically re-runs the filter and updates the list.
 
-#### Card 1: Your Favourites (Dynamic)
-
-* **`filter:`**: 
-    * **`include:`**: This finds all sensors that match the `entity_id` glob (e.g., `*_u91`) AND have the attribute `user_favourite: true`.
-    * **`exclude:`**: This filter removes entities from the list if their `state` is exactly the string `'unknown'`.
-* **`sort: { method: state, numeric: true }`**: Sorts your favourites by price (cheapest first).
-
-#### Card 2: The Main List (Dynamic)
-
-* **`card: { title: '⛽ All Other Stations' }`**: This is the key change. By adding an emoji to the `title` of the inner `entities` card, we create a clean heading that separates the favourites from the rest of the list.
-* **`filter:`**:
-    * **`include:`**: This first grabs all sensors matching the `entity_id` glob.
-    * **`exclude:`**: This removes sensors that are favourites, belong to an excluded brand, or have a state of `'unknown'`.
-* **`sort:`**: This sorts the remaining list by price.
-
-After pasting the YAML, click "**SAVE**". This should now behave exactly as expected, with a clear separation and themed headings for the two lists.
+After pasting the YAML, click "**SAVE**". You will now have a fully interactive card that allows you to switch between different fuel types without any manual setup.
