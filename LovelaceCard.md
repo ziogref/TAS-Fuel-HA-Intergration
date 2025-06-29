@@ -1,99 +1,108 @@
-# **Guide: Dynamic Fuel Price Lovelace Card**
+# Guide: Dynamic Fuel Price Lovelace Card
 
-### **Objective**
+### Objective
 
 This guide will show you how to create a single Lovelace card that displays:
 
-1. A static list of your hand-picked "Favourite" fuel stations at the top.  
-2. A dynamic list of all other fuel stations, automatically sorted from cheapest to most expensive.  
-3. The ability to exclude specific brands (e.g., United) from the dynamic list.
+1.  A static list of your hand-picked "Favourite" fuel stations at the top.
+2.  A dynamic list of all other fuel stations, automatically sorted from cheapest to most expensive.
+3.  The ability to exclude specific brands (e.g., United) from the dynamic list.
 
-### **Part 1: Prerequisites**
+---
 
-This card requires a custom component from the Home Assistant Community Store (HACS).
+### Part 1: Prerequisites
 
-1. **Install HACS:** If you haven't already, install [HACS](https://hacs.xyz/) in your Home Assistant instance.  
-2. **Install auto-entities:**  
-   * Open HACS in your Home Assistant sidebar.  
-   * Go to the "Frontend" section.  
-   * Click the blue "+ EXPLORE & DOWNLOAD REPOSITORIES" button.  
-   * Search for "**auto-entities**" and click on it.  
-   * Click the "Download" button in the bottom right.  
-   * Follow the on-screen instructions, which will likely include adding a resource to your Lovelace configuration. A Home Assistant restart may be required.
+This card requires two custom frontend components from the Home Assistant Community Store (HACS).
 
-### **Part 2: Creating the Lovelace Card**
+1.  **Install HACS:** If you haven't already, install [HACS](https://hacs.xyz/) in your Home Assistant instance.
+2.  **Install Required Cards via HACS:**
+    * Open HACS in your Home Assistant sidebar.
+    * Go to the "Frontend" section.
+    * Click the blue "+ EXPLORE & DOWNLOAD REPOSITORIES" button.
+    * Search for and download each of the following cards:
+        * **`auto-entities`**
+        * **`vertical-stack-in-card`**
+    * Follow the on-screen instructions for both. A Home Assistant restart may be required after installation.
 
-We will use a vertical-stack-in-card to combine two different cards into a single, seamless element on your dashboard.
+---
 
-1. Navigate to the dashboard where you want to add the card and click the three dots in the top right, then select "**Edit Dashboard**".  
-2. Click the "**\+ ADD CARD**" button.  
-3. Scroll to the bottom of the list and select the "**Manual**" card.  
-4. Delete the placeholder content (type: entities) and paste the YAML code from the section below.
+### Part 2: Creating the Lovelace Card
 
-### **Part 3: The YAML Code**
+We will use the `vertical-stack-in-card` to combine two different cards into a single, seamless element on your dashboard.
+
+1.  Navigate to the dashboard where you want to add the card and click the three dots in the top right, then select "**Edit Dashboard**".
+2.  Click the "**+ ADD CARD**" button.
+3.  Scroll to the bottom of the list and select the "**Manual**" card.
+4.  Delete the placeholder content (`type: entities`) and paste the YAML code from the section below.
+
+---
+
+### Part 3: The YAML Code
 
 Copy the entire code block below and paste it into the Manual card editor. Explanations for each section are provided below the code.
 
 **Important:** You will need to edit the entity IDs in the "Favourites" section to match the sensors for your actual favourite stations.
 
-type: custom:vertical-stack-in-card  
-title: Unleaded 91 Prices  
-cards:  
-  \- type: entities  
-    title: '⭐ My Favourites'  
-    show\_header\_toggle: false  
-    entities:  
-      \# \--- EDIT THIS SECTION \---  
-      \# Replace these with the actual entity IDs of YOUR favourite stations  
-      \- entity: sensor.ampol\_hobart\_u91  
-      \- entity: sensor.shell\_launceston\_u91  
-      \# \--- END EDIT SECTION \---  
-  \- type: custom:auto-entities  
-    card:  
-      type: entities  
-      show\_header\_toggle: false  
-    filter:  
-      include:  
-        \- domain: sensor  
-          \# This selects all sensors for a specific fuel type.  
-          \# Change 'u91' to your desired fuel type (e.g., 'p98', 'dl').  
-          entity\_id: '\*\_u91'  
-      exclude:  
-        \# Exclude stations that are marked as favourites to avoid duplicates.  
-        \- attributes:  
-            user\_favourite: true  
-        \# Exclude a specific brand.  
-        \- attributes:  
-            brand: United  
-    sort:  
-      method: state  
+```yaml
+type: custom:vertical-stack-in-card
+title: Unleaded 91 Prices
+cards:
+  - type: entities
+    title: '⭐ My Favourites'
+    show_header_toggle: false
+    entities:
+      # --- EDIT THIS SECTION ---
+      # Replace these with the actual entity IDs of YOUR favourite stations
+      - entity: sensor.ampol_hobart_u91
+      - entity: sensor.shell_launceston_u91
+      # --- END EDIT SECTION ---
+  - type: custom:auto-entities
+    card:
+      type: entities
+      show_header_toggle: false
+    filter:
+      include:
+        - domain: sensor
+          # This selects all sensors for a specific fuel type.
+          # Change 'u91' to your desired fuel type (e.g., 'p98', 'dl').
+          entity_id: '*_u91'
+      exclude:
+        # Exclude stations that are marked as favourites to avoid duplicates.
+        - attributes:
+            user_favourite: true
+        # Exclude a specific brand.
+        - attributes:
+            brand: United
+    sort:
+      method: state
       numeric: true
+```
 
-### **How This Code Works**
+---
 
-* **type: custom:vertical-stack-in-card**: This is the container that holds our two cards and makes them look like a single element.  
-* **title: Unleaded 91 Prices**: The main title for the entire card. You can change this to whatever you like.
+### How This Code Works
 
-#### **Card 1: Your Favourites**
+* **`type: custom:vertical-stack-in-card`**: This is the container that holds our two cards and makes them look like a single element.
+* **`title: Unleaded 91 Prices`**: The main title for the entire card. You can change this to whatever you like.
 
-* **type: entities**: A standard Home Assistant card for listing entities.  
-* **title: '⭐ My Favourites'**: The header for this specific section.  
-* **entities:**: This is the **only section you must edit manually**. You need to find the entity\_id for each of your favourite stations (e.g., in Developer Tools \> States) and list them here. The sensors you list will always appear at the top of the card in the order you write them.
+#### Card 1: Your Favourites
 
-#### **Card 2: The Dynamic List (auto-entities)**
+* **`type: entities`**: A standard Home Assistant card for listing entities.
+* **`title: '⭐ My Favourites'`**: The header for this specific section.
+* **`entities:`**: This is the **only section you must edit manually**. You need to find the `entity_id` for each of your favourite stations (e.g., in Developer Tools > States) and list them here. The sensors you list will always appear at the top of the card in the order you write them.
+
+#### Card 2: The Dynamic List (`auto-entities`)
 
 This is where the magic happens.
 
-* **type: custom:auto-entities**: Tells Lovelace to use the custom card we installed.  
-* **filter:**: This is the set of rules auto-entities uses to decide which sensors to show.  
-  * **include:**: The first pass. It grabs all entities that match these rules.  
-    * domain: sensor: Looks only at sensors.  
-    * entity\_id: '\*\_u91': This is a "glob" pattern. It finds every sensor that ends with \_u91. **You must change this** to match the fuel type you want to display (e.g., \*\_p98 for Premium 98, \*\_dl for Diesel).  
-  * **exclude:**: The second pass. It removes entities from the list generated by include.  
-    * attributes: { user\_favourite: true }: This is the most important filter. It checks the attributes of every sensor found and removes any where user\_favourite is true. This automatically prevents your favourites from appearing twice.  
-    * attributes: { brand: United }: This removes any sensor where the brand attribute is "United". You can change this or add more brand exclusions.  
-* **sort:**: This section automatically sorts the final list of entities.  
-  * method: state: Sorts the entities based on their primary state (which, for our sensors, is the fuel price).  
-  * numeric: true: Treats the state as a number for correct sorting (e.g., 1.89 is less than 1.90).
-
-After pasting and editing the YAML, click "**SAVE**". You should now have a fully functional, dynamic list of fuel prices on your dashboard.
+* **`type: custom:auto-entities`**: Tells Lovelace to use the custom card we installed.
+* **`filter:`**: This is the set of rules `auto-entities` uses to decide which sensors to show.
+    * **`include:`**: The first pass. It grabs all entities that match these rules.
+        * `domain: sensor`: Looks only at sensors.
+        * `entity_id: '*_u91'`: This is a "glob" pattern. It finds every sensor that ends with `_u91`. **You must change this** to match the fuel type you want to display (e.g., `*_p98` for Premium 98, `*_dl` for Diesel).
+    * **`exclude:`**: The second pass. It removes entities from the list generated by `include`.
+        * `attributes: { user_favourite: true }`: This is the most important filter. It checks the attributes of every sensor found and removes any where `user_favourite` is `true`. This automatically prevents your favourites from appearing twice.
+        * `attributes: { brand: United }`: This removes any sensor where the `brand` attribute is "United". You can change this or add more brand exclusions.
+* **`sort:`**: This section automatically sorts the final list of entities.
+    * `method: state`: Sorts the entities based on their primary state (which, for our sensors, is the fuel price).
+    * `numeric: true`: Treats the state as a number for correct sorting (e.g., 1.89 is less than 1.90).
