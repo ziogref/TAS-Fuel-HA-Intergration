@@ -159,10 +159,20 @@ class TasFuelAPI:
                 response = await self._session.get(url)
                 response.raise_for_status()
                 text = await response.text()
-                # Get station codes from text file, filter out empty lines
-                station_codes = {line.strip() for line in text.splitlines() if line.strip()}
+                
+                # Process each line to extract the station code, ignoring comments.
+                station_codes = set()
+                for line in text.splitlines():
+                    # Take the part before the first '#', which acts as a comment character.
+                    code_part = line.split('#', 1)[0]
+                    # Strip leading/trailing whitespace to handle various formatting.
+                    station_code = code_part.strip()
+                    # Add to the set if the resulting string is not empty.
+                    if station_code:
+                        station_codes.add(station_code)
+                
                 additional_data[provider] = list(station_codes)
-                LOGGER.debug("Successfully fetched %s station codes for %s", len(station_codes), provider)
+                LOGGER.debug("Successfully fetched and parsed %s station codes for %s", len(station_codes), provider)
             except ClientError as e:
                 LOGGER.error("Error fetching additional data list for %s: %s", provider, e)
                 # If a list fails to download, provide an empty list to prevent errors
