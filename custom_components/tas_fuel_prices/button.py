@@ -20,11 +20,13 @@ async def async_setup_entry(
     """Set up the button platform."""
     data_bundle = hass.data[DOMAIN][entry.entry_id]
     price_coordinator: DataUpdateCoordinator = data_bundle["price_coordinator"]
+    additional_data_coordinator: DataUpdateCoordinator = data_bundle["additional_data_coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
 
     buttons = [
         TasFuelRefreshTokenButton(price_coordinator, api_client),
         TasFuelRefreshPricesButton(price_coordinator),
+        TasFuelRefreshAdditionalDataButton(price_coordinator, additional_data_coordinator),
     ]
     async_add_entities(buttons)
 
@@ -81,3 +83,32 @@ class TasFuelRefreshPricesButton(ButtonEntity):
     async def async_press(self) -> None:
         """Handle the button press."""
         await self.coordinator.async_request_refresh()
+
+
+class TasFuelRefreshAdditionalDataButton(ButtonEntity):
+    """Representation of a button to manually refresh additional data from GitHub."""
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, price_coordinator: DataUpdateCoordinator, additional_data_coordinator: DataUpdateCoordinator) -> None:
+        """Initialize the button."""
+        self.price_coordinator = price_coordinator
+        self.additional_data_coordinator = additional_data_coordinator
+        self._attr_name = "Refresh Discount & Amenity Data"
+        self._attr_unique_id = f"{price_coordinator.config_entry.entry_id}_refresh_additional_data"
+        self._attr_icon = "mdi:download"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this button is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.price_coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+        )
+
+    async def async_press(self) -> None:
+        """Handle the button press."""
+        # First, refresh the community-sourced data (discounts, amenities, etc.)
+        await self.additional_data_coordinator.async_request_refresh()
+        # Then, refresh the prices to make the sensors update their state immediately with the new data.
+        await self.price_coordinator.async_request_refresh()

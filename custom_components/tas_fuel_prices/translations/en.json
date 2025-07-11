@@ -116,6 +116,9 @@
       },
       "refresh_prices": {
         "name": "Refresh Fuel Prices"
+      },
+      "refresh_additional_data": {
+        "name": "Refresh Discount & Amenity Data"
       }
     },
     "sensor": {
