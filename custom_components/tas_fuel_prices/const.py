@@ -19,6 +19,8 @@ ATTR_DISCOUNT_APPLIED = "discount_applied"
 ATTR_DISCOUNT_PROVIDER = "discount_provider"
 ATTR_USER_FAVOURITE = "user_favourite"
 ATTR_TYRE_INFLATION = "tyre_inflation"
+ATTR_IN_RANGE = "in_range"
+ATTR_DISTANCE = "distance"
 
 
 # API Configuration
@@ -59,6 +61,10 @@ CONF_RACT_ADDITIONAL_STATIONS = "ract_additional_stations"
 # Tyre Inflation Configuration
 CONF_ADD_TYRE_INFLATION_STATIONS = "add_tyre_inflation_stations"
 CONF_REMOVE_TYRE_INFLATION_STATIONS = "remove_tyre_inflation_stations"
+
+# Geolocation Configuration
+CONF_LOCATION_ENTITY = "location_entity"
+CONF_RANGE = "range"
 
 # Select Entity
 SELECT_FUEL_TYPE_ENTITY_NAME = "Fuel Type Selector"

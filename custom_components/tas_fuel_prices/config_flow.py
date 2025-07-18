@@ -10,6 +10,13 @@ from homeassistant.config_entries import ConfigFlow, OptionsFlow, ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    EntitySelector,
+    EntitySelectorConfig,
+)
+
 
 from .const import (
     DOMAIN,
@@ -29,6 +36,8 @@ from .const import (
     CONF_RACT_ADDITIONAL_STATIONS,
     CONF_ADD_TYRE_INFLATION_STATIONS,
     CONF_REMOVE_TYRE_INFLATION_STATIONS,
+    CONF_LOCATION_ENTITY,
+    CONF_RANGE,
 )
 from .api import TasFuelAPI
 
@@ -38,7 +47,7 @@ FUEL_TYPES_OPTIONS = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LP
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
-    VERSION = 6
+    VERSION = 7
     data: dict[str, Any] = {}
     options: dict[str, Any] = {}
 
@@ -162,13 +171,29 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle Tyre Inflation override options."""
         if user_input is not None:
             self.options.update(user_input)
-            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, default=""): str,
             vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, default=""): str,
         })
         return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
+
+    async def async_step_geolocation(self, user_input: dict[str, Any] | None = None):
+        """Handle geolocation options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_LOCATION_ENTITY): EntitySelector(
+                EntitySelectorConfig(domain=["device_tracker", "person", "zone"]),
+            ),
+            vol.Optional(CONF_RANGE, default=5): NumberSelector(
+                NumberSelectorConfig(min=1, max=100, step=1, unit_of_measurement="km"),
+            ),
+        })
+        return self.async_show_form(step_id="geolocation", data_schema=schema)
 
     @staticmethod
     @callback
@@ -271,10 +296,31 @@ class OptionsFlowHandler(OptionsFlow):
         """Handle Tyre Inflation override options for re-configuration."""
         if user_input is not None:
             self.options.update(user_input)
-            return self.async_create_entry(title="", data=self.options)
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "")}): str,
             vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "")}): str,
         })
         return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
+
+    async def async_step_geolocation(self, user_input: dict[str, Any] | None = None):
+        """Handle geolocation options for re-configuration."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return self.async_create_entry(title="", data=self.options)
+
+        schema = vol.Schema({
+            vol.Optional(
+                CONF_LOCATION_ENTITY,
+                description={"suggested_value": self.options.get(CONF_LOCATION_ENTITY)},
+            ): EntitySelector(
+                EntitySelectorConfig(domain=["device_tracker", "person", "zone"]),
+            ),
+            vol.Optional(
+                CONF_RANGE, default=self.options.get(CONF_RANGE, 5)
+            ): NumberSelector(
+                NumberSelectorConfig(min=1, max=100, step=1, unit_of_measurement="km"),
+            ),
+        })
+        return self.async_show_form(step_id="geolocation", data_schema=schema)

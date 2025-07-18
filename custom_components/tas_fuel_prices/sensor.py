@@ -2,6 +2,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from math import radians, sin, cos, sqrt, atan2
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -29,6 +30,8 @@ from .const import (
     ATTR_DISCOUNT_PROVIDER,
     ATTR_USER_FAVOURITE,
     ATTR_TYRE_INFLATION,
+    ATTR_IN_RANGE,
+    ATTR_DISTANCE,
     LOGGER,
     CONF_ENABLE_COLES_DISCOUNT,
     CONF_COLES_DISCOUNT_AMOUNT,
@@ -41,7 +44,18 @@ from .const import (
     CONF_RACT_ADDITIONAL_STATIONS,
     CONF_ADD_TYRE_INFLATION_STATIONS,
     CONF_REMOVE_TYRE_INFLATION_STATIONS,
+    CONF_LOCATION_ENTITY,
+    CONF_RANGE,
 )
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Calculate the distance between two points in kilometers."""
+    R = 6371  # Radius of Earth in kilometers
+    dLat = radians(lat2 - lat1)
+    dLon = radians(lon2 - lon1)
+    a = sin(dLat / 2) * sin(dLat / 2) + cos(radians(lat1)) * cos(radians(lat2)) * sin(dLon / 2) * sin(dLon / 2)
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return R * c
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -77,7 +91,8 @@ async def async_setup_entry(
                         station_name=station_info.get("name", f"Station {station_code}"),
                         fuel_type=fuel_type,
                         time_zone=time_zone,
-                        favourite_stations=favourite_stations
+                        favourite_stations=favourite_stations,
+                        hass=hass,
                     )
                 )
     
@@ -98,6 +113,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         fuel_type: str,
         time_zone: ZoneInfo,
         favourite_stations: list[str],
+        hass: HomeAssistant,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(price_coordinator)
@@ -107,6 +123,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self._fuel_type = fuel_type
         self._time_zone = time_zone
         self._favourite_stations = favourite_stations
+        self.hass = hass
 
         self._attr_name = f"{station_name} {fuel_type}"
         self._attr_unique_id = f"{self.coordinator.config_entry.entry_id}_{station_code}_{fuel_type}"
@@ -228,6 +245,24 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             filtered_station_info.pop("brandid", None)
             filtered_station_info.pop("stationid", None)
             
+            # Geolocation logic
+            location_entity_id = self.entry.options.get(CONF_LOCATION_ENTITY)
+            range_km = self.entry.options.get(CONF_RANGE, 5)
+            distance = None
+            is_in_range = True  # Default to True
+
+            if location_entity_id and station_info.get("location"):
+                location_state = self.hass.states.get(location_entity_id)
+                if location_state and 'latitude' in location_state.attributes and 'longitude' in location_state.attributes:
+                    phone_lat = location_state.attributes['latitude']
+                    phone_lon = location_state.attributes['longitude']
+                    station_lat = station_info["location"]["latitude"]
+                    station_lon = station_info["location"]["longitude"]
+
+                    if phone_lat and phone_lon and station_lat and station_lon:
+                        distance = haversine(phone_lat, phone_lon, station_lat, station_lon)
+                        is_in_range = distance <= range_km
+
             attributes = {
                 **filtered_station_info,
                 "all_prices_at_station": cleaned_prices,
@@ -236,6 +271,8 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_DISCOUNT_PROVIDER: discount_provider,
                 ATTR_USER_FAVOURITE: is_favourite,
                 ATTR_TYRE_INFLATION: tyre_inflation,
+                ATTR_DISTANCE: f"{distance:.2f} km" if distance is not None else "Unknown",
+                ATTR_IN_RANGE: is_in_range,
             }
             self._attr_extra_state_attributes = attributes
         else:

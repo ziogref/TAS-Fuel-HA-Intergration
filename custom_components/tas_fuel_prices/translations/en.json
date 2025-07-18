@@ -52,6 +52,14 @@
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
         }
+      },
+      "geolocation": {
+        "title": "Geolocation Settings",
+        "description": "Select a device tracker, person, or zone entity to calculate distance to stations. If no entity is selected, all stations will be considered 'in range'.",
+        "data": {
+          "location_entity": "Location Entity",
+          "range": "Range (km)"
+        }
       }
     },
     "error": {
@@ -105,6 +113,14 @@
         "data": {
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
+        }
+      },
+      "geolocation": {
+        "title": "Geolocation Settings",
+        "description": "Select a device tracker, person, or zone entity to calculate distance to stations. If no entity is selected, all stations will be considered 'in range'.",
+        "data": {
+          "location_entity": "Location Entity",
+          "range": "Range (km)"
         }
       }
     }
