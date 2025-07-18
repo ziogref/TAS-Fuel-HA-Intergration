@@ -1,12 +1,19 @@
 """The Tasmanian Fuel Prices integration."""
 from __future__ import annotations
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.const import Platform, EVENT_HOMEASSISTANT_STOP, STATE_ON
+from homeassistant.core import HomeAssistant, Event
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.event import (
+    async_track_state_change_event,
+    async_track_time_interval,
+)
+from homeassistant.helpers.dispatcher import dispatcher_send
+
 
 from .api import TasFuelAPI
 from .const import (
@@ -17,6 +24,7 @@ from .const import (
     CONF_API_KEY,
     CONF_API_SECRET,
     CONF_DEVICE_NAME,
+    CONF_LOCATION_ENTITY,
 )
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON, Platform.SELECT]
@@ -33,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
         manufacturer="Custom Integration",
-        model="1.4.0", # Version bump
+        model="1.5.0", # Version bump
     )
 
     session = async_get_clientsession(hass)
@@ -65,22 +73,107 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await price_coordinator.async_config_entry_first_refresh()
     await additional_data_coordinator.async_config_entry_first_refresh()
 
-
-    hass.data[DOMAIN][entry.entry_id] = {
+    data_bundle = {
         "price_coordinator": price_coordinator,
         "additional_data_coordinator": additional_data_coordinator,
         "api": api,
+        "aa_interval_cancel": None, # For Android Auto rapid updates
     }
+    hass.data[DOMAIN][entry.entry_id] = data_bundle
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    
+    # Set up the Android Auto fast-update listener
+    await async_setup_android_auto_listener(hass, entry)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
     return True
+
+async def async_setup_android_auto_listener(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up a listener to enable rapid distance updates when Android Auto is active."""
+    location_entity_id = entry.options.get(CONF_LOCATION_ENTITY)
+    if not location_entity_id:
+        return
+
+    ent_reg = er.async_get(hass)
+    entity_entry = ent_reg.async_get(location_entity_id)
+
+    if not entity_entry or not entity_entry.device_id:
+        return
+
+    # Find the Android Auto sensor associated with the same device
+    android_auto_sensor_id = None
+    device_entities = er.async_entries_for_device(ent_reg, entity_entry.device_id)
+    for device_entity in device_entities:
+        if (
+            device_entity.platform == "mobile_app"
+            and device_entity.domain == "binary_sensor"
+            and device_entity.entity_id.endswith("_android_auto")
+        ):
+            android_auto_sensor_id = device_entity.entity_id
+            LOGGER.info("Found Android Auto sensor: %s", android_auto_sensor_id)
+            break
+    
+    if not android_auto_sensor_id:
+        LOGGER.info("No Android Auto sensor found for device of %s", location_entity_id)
+        return
+        
+    data_bundle = hass.data[DOMAIN][entry.entry_id]
+
+    def _start_aa_interval():
+        """Start the 1-minute update interval."""
+        if data_bundle["aa_interval_cancel"] is None:
+            LOGGER.info("Android Auto active. Starting 1-minute distance updates.")
+            recalculate_callback = lambda *_: dispatcher_send(hass, f"{DOMAIN}_{entry.entry_id}_recalculate_distance")
+            data_bundle["aa_interval_cancel"] = async_track_time_interval(
+                hass, recalculate_callback, timedelta(minutes=1)
+            )
+            # Immediately trigger a recalculation
+            recalculate_callback()
+
+    def _stop_aa_interval():
+        """Stop the 1-minute update interval."""
+        if data_bundle["aa_interval_cancel"]:
+            LOGGER.info("Android Auto inactive. Stopping 1-minute distance updates.")
+            data_bundle["aa_interval_cancel"]()
+            data_bundle["aa_interval_cancel"] = None
+
+    async def android_auto_state_listener(event: Event) -> None:
+        """Handle state changes for the Android Auto sensor."""
+        new_state = event.data.get("new_state")
+        if new_state and new_state.state == STATE_ON:
+            _start_aa_interval()
+        else:
+            _stop_aa_interval()
+
+    # Register the state change listener
+    entry.async_on_unload(
+        async_track_state_change_event(
+            hass, [android_auto_sensor_id], android_auto_state_listener
+        )
+    )
+
+    # Check the initial state of the sensor when setting up
+    if (aa_state := hass.states.get(android_auto_sensor_id)) and aa_state.state == STATE_ON:
+        _start_aa_interval()
+
+    # Ensure the interval is cancelled on shutdown
+    async def _stop_on_shutdown(event):
+        _stop_aa_interval()
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_on_shutdown)
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    # Cancel the Android Auto interval timer if it's running
+    if (
+        data_bundle := hass.data[DOMAIN].get(entry.entry_id)
+    ) and data_bundle["aa_interval_cancel"]:
+        data_bundle["aa_interval_cancel"]()
+
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
 

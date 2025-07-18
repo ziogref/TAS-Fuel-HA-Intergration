@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .api import TasFuelAPI
 from .const import (
@@ -141,10 +142,63 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             via_device=(DOMAIN, self.coordinator.config_entry.entry_id)
         )
 
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        # Listen for the signal to recalculate distance
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                f"{DOMAIN}_{self.coordinator.config_entry.entry_id}_recalculate_distance",
+                self.async_recalculate_distance,
+            )
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self._update_state()
+        self.async_write_ha_state()
+
+    def _calculate_distance_attributes(self) -> dict:
+        """Calculate distance and in_range attributes."""
+        location_entity_id = self.entry.options.get(CONF_LOCATION_ENTITY)
+        if not location_entity_id:
+            return {ATTR_DISTANCE: "Not Configured", ATTR_IN_RANGE: True}
+
+        range_km = self.entry.options.get(CONF_RANGE, 5)
+        all_stations_map = {str(station['code']): station for station in self.coordinator.data.get('stations', [])}
+        station_info = all_stations_map.get(self._station_code)
+        
+        distance = None
+        is_in_range = True  # Default to True if we can't calculate
+
+        if station_info and station_info.get("location"):
+            location_state = self.hass.states.get(location_entity_id)
+            if location_state and 'latitude' in location_state.attributes and 'longitude' in location_state.attributes:
+                phone_lat = location_state.attributes['latitude']
+                phone_lon = location_state.attributes['longitude']
+                station_lat = station_info["location"]["latitude"]
+                station_lon = station_info["location"]["longitude"]
+
+                if phone_lat and phone_lon and station_lat and station_lon:
+                    distance = haversine(phone_lat, phone_lon, station_lat, station_lon)
+                    is_in_range = distance <= range_km
+        
+        return {
+            ATTR_DISTANCE: f"{distance:.2f} km" if distance is not None else "Unknown",
+            ATTR_IN_RANGE: is_in_range,
+        }
+
+    @callback
+    def async_recalculate_distance(self) -> None:
+        """Recalculate distance attributes for Android Auto updates."""
+        if not self.coordinator.data or not self._attr_extra_state_attributes:
+            return
+
+        LOGGER.debug("Recalculating distance for %s due to AA update", self.entity_id)
+        new_geo_attrs = self._calculate_distance_attributes()
+        self._attr_extra_state_attributes.update(new_geo_attrs)
         self.async_write_ha_state()
 
     def _update_state(self) -> None:
@@ -245,24 +299,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             filtered_station_info.pop("brandid", None)
             filtered_station_info.pop("stationid", None)
             
-            # Geolocation logic
-            location_entity_id = self.entry.options.get(CONF_LOCATION_ENTITY)
-            range_km = self.entry.options.get(CONF_RANGE, 5)
-            distance = None
-            is_in_range = True  # Default to True
-
-            if location_entity_id and station_info.get("location"):
-                location_state = self.hass.states.get(location_entity_id)
-                if location_state and 'latitude' in location_state.attributes and 'longitude' in location_state.attributes:
-                    phone_lat = location_state.attributes['latitude']
-                    phone_lon = location_state.attributes['longitude']
-                    station_lat = station_info["location"]["latitude"]
-                    station_lon = station_info["location"]["longitude"]
-
-                    if phone_lat and phone_lon and station_lat and station_lon:
-                        distance = haversine(phone_lat, phone_lon, station_lat, station_lon)
-                        is_in_range = distance <= range_km
-
             attributes = {
                 **filtered_station_info,
                 "all_prices_at_station": cleaned_prices,
@@ -271,9 +307,10 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_DISCOUNT_PROVIDER: discount_provider,
                 ATTR_USER_FAVOURITE: is_favourite,
                 ATTR_TYRE_INFLATION: tyre_inflation,
-                ATTR_DISTANCE: f"{distance:.2f} km" if distance is not None else "Unknown",
-                ATTR_IN_RANGE: is_in_range,
             }
+            # Add geolocation attributes
+            attributes.update(self._calculate_distance_attributes())
+            
             self._attr_extra_state_attributes = attributes
         else:
             self._attr_native_value = None
