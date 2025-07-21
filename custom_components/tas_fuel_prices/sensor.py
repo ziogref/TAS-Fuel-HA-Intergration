@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from math import radians, sin, cos, sqrt, atan2
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.util import dt as dt_util
 
 from .api import TasFuelAPI
 from .const import (
@@ -75,9 +76,11 @@ async def async_setup_entry(
     favourite_stations = entry.options.get(CONF_STATIONS, [])
     time_zone = ZoneInfo(hass.config.time_zone)
 
-    sensors: list[SensorEntity] = []
-
-    sensors.append(TasFuelTokenExpirySensor(price_coordinator, api_client, hass.config.time_zone))
+    sensors: list[SensorEntity] = [
+        TasFuelTokenExpirySensor(price_coordinator, api_client, hass.config.time_zone),
+        TasFuelPricesLastUpdatedSensor(price_coordinator),
+        TasFuelAdditionalDataLastUpdatedSensor(additional_data_coordinator),
+    ]
 
     if price_coordinator.data:
         all_stations = price_coordinator.data.get('stations', [])
@@ -378,4 +381,60 @@ class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+class TasFuelPricesLastUpdatedSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a sensor that shows the last price update time."""
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: DataUpdateCoordinator) -> None:
+        """Initialize the diagnostic sensor."""
+        super().__init__(coordinator)
+        self.entity_id = f"sensor.{DOMAIN}_prices_last_updated"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_prices_last_updated"
+        self._attr_name = "Prices Last Updated"
+        self._attr_native_value = dt_util.utcnow() if coordinator.last_update_success else None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this sensor is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._attr_native_value = dt_util.utcnow()
+        self.async_write_ha_state()
+
+class TasFuelAdditionalDataLastUpdatedSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a sensor that shows the last additional data update time."""
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: DataUpdateCoordinator) -> None:
+        """Initialize the diagnostic sensor."""
+        super().__init__(coordinator)
+        self.entity_id = f"sensor.{DOMAIN}_additional_data_last_updated"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_additional_data_last_updated"
+        self._attr_name = "Additional Data Last Updated"
+        self._attr_native_value = dt_util.utcnow() if coordinator.last_update_success else None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this sensor is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._attr_native_value = dt_util.utcnow()
         self.async_write_ha_state()
