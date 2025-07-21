@@ -52,6 +52,8 @@ from .const import (
     CONF_REMOVE_TYRE_INFLATION_STATIONS,
     CONF_LOCATION_ENTITY,
     CONF_RANGE,
+    CONF_EXCLUDED_DISTRIBUTORS,
+    CONF_EXCLUDED_OPERATORS,
 )
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -88,6 +90,11 @@ async def async_setup_entry(
     for fuel_type in fuel_types:
         sensors.append(
             TasFuelCheapestNearMeSummarySensor(
+                price_coordinator, additional_data_coordinator, entry, fuel_type, hass
+            )
+        )
+        sensors.append(
+            TasFuelCheapestFilteredSummarySensor(
                 price_coordinator, additional_data_coordinator, entry, fuel_type, hass
             )
         )
@@ -355,8 +362,8 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 "error": "Price not available for this station and fuel type",
             }
 
-class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
-    """Representation of a summary sensor for the cheapest stations nearby."""
+class BaseSummarySensor(CoordinatorEntity, SensorEntity):
+    """Base class for summary sensors."""
     _attr_has_entity_name = True
 
     def __init__(
@@ -373,11 +380,6 @@ class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
         self.entry = entry
         self._fuel_type = fuel_type
         self.hass = hass
-
-        self._attr_name = f"{fuel_type} Cheapest Near Me"
-        self._attr_unique_id = f"{entry.entry_id}_{fuel_type}_cheapest_near_me"
-        self._attr_icon = "mdi:map-marker-radius"
-        self._attr_native_unit_of_measurement = "AUD/L"
         self._attr_extra_state_attributes = {ATTR_STATIONS: []}
 
     @property
@@ -408,29 +410,22 @@ class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
         self._update_state()
         self.async_write_ha_state()
 
-    def _update_state(self) -> None:
-        """Update the state and attributes of the summary sensor."""
+    def _build_station_list(self) -> list[dict]:
+        """Build a comprehensive list of all stations for the fuel type."""
         if not self.coordinator.data or not self.additional_data_coordinator.data:
-            self._attr_native_value = None
-            return
+            return []
 
         all_stations_info = self.coordinator.data.get('stations', [])
         all_prices = self.coordinator.data.get('prices', [])
         additional_data = self.additional_data_coordinator.data
         options = self.entry.options
-
-        # --- Build a comprehensive list of all stations for this fuel type ---
-        all_processed_stations = []
+        
+        processed_stations = []
         for station_info in all_stations_info:
             station_code = str(station_info.get("code"))
             price_info = next((p for p in all_prices if str(p.get("stationcode")) == station_code and p.get("fueltype") == self._fuel_type), None)
 
             if not price_info or price_info.get('price') is None:
-                continue
-
-            # Calculate distance and check if in range
-            dist_attrs = self._calculate_distance_attributes(station_info)
-            if not dist_attrs[ATTR_IN_RANGE]:
                 continue
 
             # Calculate discounts
@@ -458,7 +453,7 @@ class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
             remove_list = {s.strip() for s in options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
             has_tyres = station_code in add_list or (station_code in tyre_inflation_list and station_code not in remove_list)
 
-            all_processed_stations.append({
+            processed_stations.append({
                 "name": station_info.get("name"),
                 "address": station_info.get("address"),
                 "code": station_code,
@@ -467,32 +462,9 @@ class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
                 "distributor": additional_data.get("distributors", {}).get(station_code, "No data found"),
                 "operator": additional_data.get("operators", {}).get(station_code, "No data found"),
                 ATTR_TYRE_INFLATION: has_tyres,
-                **dist_attrs,
+                **self._calculate_distance_attributes(station_info),
             })
-
-        if not all_processed_stations:
-            self._attr_native_value = None
-            self._attr_extra_state_attributes[ATTR_STATIONS] = []
-            return
-
-        # --- Apply summary logic ---
-        # Sort all in-range stations by discounted price
-        sorted_stations = sorted(all_processed_stations, key=operator.itemgetter("discounted_price"))
-        
-        cheapest_overall = sorted_stations[0]
-        cheapest_with_tyres = next((s for s in sorted_stations if s[ATTR_TYRE_INFLATION]), None)
-
-        summary_list = []
-        if cheapest_with_tyres and cheapest_with_tyres["code"] == cheapest_overall["code"]:
-            summary_list.append(cheapest_overall)
-        elif cheapest_with_tyres:
-            summary_list.append(cheapest_overall)
-            summary_list.append(cheapest_with_tyres)
-        else: # No stations with tyres in range
-            summary_list.append(cheapest_overall)
-
-        self._attr_native_value = cheapest_overall["discounted_price"]
-        self._attr_extra_state_attributes[ATTR_STATIONS] = summary_list
+        return processed_stations
 
     def _calculate_distance_attributes(self, station_info: dict) -> dict:
         """Helper to calculate distance for a single station."""
@@ -520,6 +492,82 @@ class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
             ATTR_DISTANCE: f"{distance:.2f} km" if distance is not None else "Unknown",
             ATTR_IN_RANGE: is_in_range,
         }
+
+    def _update_state(self) -> None:
+        """This method should be implemented by subclasses."""
+        raise NotImplementedError
+
+class TasFuelCheapestNearMeSummarySensor(BaseSummarySensor):
+    """Representation of a summary sensor for the cheapest stations nearby."""
+    _attr_icon = "mdi:map-marker-radius"
+    _attr_native_unit_of_measurement = "AUD/L"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._attr_name = f"{self._fuel_type} Cheapest Near Me"
+        self._attr_unique_id = f"{self.entry.entry_id}_{self._fuel_type}_cheapest_near_me"
+
+    def _update_state(self) -> None:
+        """Update the state and attributes of the summary sensor."""
+        all_stations = self._build_station_list()
+        
+        in_range_stations = [s for s in all_stations if s[ATTR_IN_RANGE]]
+
+        if not in_range_stations:
+            self._attr_native_value = None
+            self._attr_extra_state_attributes[ATTR_STATIONS] = []
+            return
+
+        sorted_stations = sorted(in_range_stations, key=operator.itemgetter("discounted_price"))
+        
+        cheapest_overall = sorted_stations[0]
+        cheapest_with_tyres = next((s for s in sorted_stations if s[ATTR_TYRE_INFLATION]), None)
+
+        summary_list = []
+        if cheapest_with_tyres and cheapest_with_tyres["code"] == cheapest_overall["code"]:
+            summary_list.append(cheapest_overall)
+        elif cheapest_with_tyres:
+            summary_list.append(cheapest_overall)
+            summary_list.append(cheapest_with_tyres)
+        else:
+            summary_list.append(cheapest_overall)
+
+        self._attr_native_value = cheapest_overall["discounted_price"]
+        self._attr_extra_state_attributes[ATTR_STATIONS] = summary_list
+
+class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
+    """Representation of a summary sensor with user-defined filters."""
+    _attr_icon = "mdi:filter-variant"
+    _attr_native_unit_of_measurement = "AUD/L"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._attr_name = f"{self._fuel_type} Cheapest Filtered"
+        self._attr_unique_id = f"{self.entry.entry_id}_{self._fuel_type}_cheapest_filtered"
+
+    def _update_state(self) -> None:
+        """Update the state and attributes of the summary sensor."""
+        all_stations = self._build_station_list()
+        options = self.entry.options
+        
+        excluded_distributors = set(options.get(CONF_EXCLUDED_DISTRIBUTORS, []))
+        excluded_operators = set(options.get(CONF_EXCLUDED_OPERATORS, []))
+
+        filtered_stations = [
+            s for s in all_stations
+            if s["distributor"] not in excluded_distributors and s["operator"] not in excluded_operators
+        ]
+
+        if not filtered_stations:
+            self._attr_native_value = None
+            self._attr_extra_state_attributes[ATTR_STATIONS] = []
+            return
+
+        sorted_stations = sorted(filtered_stations, key=operator.itemgetter("discounted_price"))
+        
+        self._attr_native_value = sorted_stations[0]["discounted_price"]
+        self._attr_extra_state_attributes[ATTR_STATIONS] = sorted_stations
+
 
 class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
     """Representation of a sensor that shows token expiry."""
