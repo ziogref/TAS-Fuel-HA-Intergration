@@ -71,6 +71,10 @@ CONF_REMOVE_TYRE_INFLATION_STATIONS = "remove_tyre_inflation_stations"
 CONF_LOCATION_ENTITY = "location_entity"
 CONF_RANGE = "range"
 
+# Summary Sensor Filtering
+CONF_EXCLUDED_DISTRIBUTORS = "excluded_distributors"
+CONF_EXCLUDED_OPERATORS = "excluded_operators"
+
 # Select Entity
 SELECT_FUEL_TYPE_ENTITY_NAME = "Fuel Type Selector"
 FUEL_TYPE_ORDER = [

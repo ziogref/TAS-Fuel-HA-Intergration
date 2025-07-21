@@ -53,6 +53,14 @@
           "range": "Range (km)"
         }
       },
+      "summary_filtering": {
+        "title": "Optional: Summary Sensor Filtering",
+        "description": "Select any fuel distributors or site operators you wish to exclude from the 'Cheapest Filtered' summary sensors. This allows you to ignore brands you do not use.",
+        "data": {
+          "excluded_distributors": "Distributors to Exclude",
+          "excluded_operators": "Operators to Exclude"
+        }
+      },
       "tyre_inflation": {
         "title": "Optional: Tyre Inflation Adjustments",
         "description": "This page is optional. If you don't know what to do, leave the fields blank and click submit.\n\nYou can use this to correct the community-sourced list of stations with tyre inflation. For example, add a station that has a new machine, or remove a station where the machine is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
@@ -115,6 +123,14 @@
           "range": "Range (km)"
         }
       },
+      "summary_filtering": {
+        "title": "Optional: Summary Sensor Filtering",
+        "description": "Select any fuel distributors or site operators you wish to exclude from the 'Cheapest Filtered' summary sensors. This allows you to ignore brands you do not use.",
+        "data": {
+          "excluded_distributors": "Distributors to Exclude",
+          "excluded_operators": "Operators to Exclude"
+        }
+      },
       "tyre_inflation": {
         "title": "Optional: Tyre Inflation Adjustments",
         "description": "This page is optional. If you don't know what to do, leave the fields blank and click submit.\n\nYou can use this to correct the community-sourced list of stations with tyre inflation. For example, add a station that has a new machine, or remove a station where the machine is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
@@ -149,6 +165,9 @@
       },
       "cheapest_near_me_summary": {
         "name": "{fuel_type} Cheapest Near Me"
+      },
+      "cheapest_filtered_summary": {
+        "name": "{fuel_type} Cheapest Filtered"
       }
     }
   }

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 from typing import Any
+import aiohttp
 
 from aiohttp import ClientError, ClientResponseError
 
@@ -38,16 +39,35 @@ from .const import (
     CONF_REMOVE_TYRE_INFLATION_STATIONS,
     CONF_LOCATION_ENTITY,
     CONF_RANGE,
+    CONF_EXCLUDED_DISTRIBUTORS,
+    CONF_EXCLUDED_OPERATORS,
+    DISTRIBUTOR_URL,
+    OPERATORS_URL,
 )
 from .api import TasFuelAPI
 
 FUEL_TYPES_OPTIONS = ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LPG"]
 
+async def get_github_directory_options(url: str) -> list[str]:
+    """Fetch file names from a GitHub directory to use as multi-select options."""
+    options = []
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                files = await response.json()
+                for file_info in files:
+                    if file_info.get("type") == "file" and file_info.get("name").endswith(".txt"):
+                        options.append(file_info["name"].replace(".txt", ""))
+    except (ClientError, KeyError) as e:
+        LOGGER.error("Could not fetch options from GitHub URL %s: %s", url, e)
+    return sorted(options)
+
 
 class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tasmanian Fuel Prices."""
 
-    VERSION = 7
+    VERSION = 9
     data: dict[str, Any] = {}
     options: dict[str, Any] = {}
 
@@ -102,7 +122,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
 
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema(
             {
@@ -127,7 +147,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=6): int,
@@ -143,7 +163,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             self.options.update(user_input)
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Required(CONF_COLES_DISCOUNT_AMOUNT, default=4): int,
@@ -157,7 +177,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle RACT discount options."""
         if user_input is not None:
             self.options.update(user_input)
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Required(CONF_RACT_DISCOUNT_AMOUNT, default=6): int,
@@ -165,25 +185,11 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         })
         return self.async_show_form(step_id="ract_discount", data_schema=schema)
 
-    async def async_step_tyre_inflation(
-        self, user_input: dict[str, Any] | None = None
-    ):
-        """Handle Tyre Inflation override options."""
-        if user_input is not None:
-            self.options.update(user_input)
-            return await self.async_step_geolocation()
-
-        schema = vol.Schema({
-            vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, default=""): str,
-            vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, default=""): str,
-        })
-        return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
-
     async def async_step_geolocation(self, user_input: dict[str, Any] | None = None):
         """Handle geolocation options."""
         if user_input is not None:
             self.options.update(user_input)
-            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+            return await self.async_step_summary_filtering()
 
         schema = vol.Schema({
             vol.Optional(CONF_LOCATION_ENTITY): EntitySelector(
@@ -194,6 +200,35 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         })
         return self.async_show_form(step_id="geolocation", data_schema=schema)
+
+    async def async_step_summary_filtering(self, user_input: dict[str, Any] | None = None):
+        """Handle summary sensor filtering options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_tyre_inflation()
+
+        distributor_options = await get_github_directory_options(DISTRIBUTOR_URL)
+        operator_options = await get_github_directory_options(OPERATORS_URL)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_EXCLUDED_DISTRIBUTORS, default=[]): cv.multi_select(distributor_options),
+            vol.Optional(CONF_EXCLUDED_OPERATORS, default=[]): cv.multi_select(operator_options),
+        })
+        return self.async_show_form(step_id="summary_filtering", data_schema=schema)
+
+    async def async_step_tyre_inflation(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle Tyre Inflation override options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return self.async_create_entry(title="Tasmanian Fuel Prices", data=self.data, options=self.options)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, default=""): str,
+            vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, default=""): str,
+        })
+        return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
 
     @staticmethod
     @callback
@@ -229,7 +264,7 @@ class OptionsFlowHandler(OptionsFlow):
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
             
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
                 vol.Required(CONF_FUEL_TYPES, default=self.options.get(CONF_FUEL_TYPES, ["U91"])): cv.multi_select(
@@ -252,7 +287,7 @@ class OptionsFlowHandler(OptionsFlow):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Required(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, default=self.options.get(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, 6)): int,
@@ -268,7 +303,7 @@ class OptionsFlowHandler(OptionsFlow):
             self.options.update(user_input)
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Required(CONF_COLES_DISCOUNT_AMOUNT, default=self.options.get(CONF_COLES_DISCOUNT_AMOUNT, 4)): int,
@@ -282,7 +317,7 @@ class OptionsFlowHandler(OptionsFlow):
         """Handle RACT discount options for re-configuration."""
         if user_input is not None:
             self.options.update(user_input)
-            return await self.async_step_tyre_inflation()
+            return await self.async_step_geolocation()
 
         schema = vol.Schema({
             vol.Required(CONF_RACT_DISCOUNT_AMOUNT, default=self.options.get(CONF_RACT_DISCOUNT_AMOUNT, 6)): int,
@@ -290,25 +325,11 @@ class OptionsFlowHandler(OptionsFlow):
         })
         return self.async_show_form(step_id="ract_discount", data_schema=schema)
 
-    async def async_step_tyre_inflation(
-        self, user_input: dict[str, Any] | None = None
-    ):
-        """Handle Tyre Inflation override options for re-configuration."""
-        if user_input is not None:
-            self.options.update(user_input)
-            return await self.async_step_geolocation()
-
-        schema = vol.Schema({
-            vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "")}): str,
-            vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "")}): str,
-        })
-        return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
-
     async def async_step_geolocation(self, user_input: dict[str, Any] | None = None):
         """Handle geolocation options for re-configuration."""
         if user_input is not None:
             self.options.update(user_input)
-            return self.async_create_entry(title="", data=self.options)
+            return await self.async_step_summary_filtering()
 
         schema = vol.Schema({
             vol.Optional(
@@ -324,3 +345,32 @@ class OptionsFlowHandler(OptionsFlow):
             ),
         })
         return self.async_show_form(step_id="geolocation", data_schema=schema)
+
+    async def async_step_summary_filtering(self, user_input: dict[str, Any] | None = None):
+        """Handle summary sensor filtering options for re-configuration."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_tyre_inflation()
+
+        distributor_options = await get_github_directory_options(DISTRIBUTOR_URL)
+        operator_options = await get_github_directory_options(OPERATORS_URL)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_EXCLUDED_DISTRIBUTORS, default=self.options.get(CONF_EXCLUDED_DISTRIBUTORS, [])): cv.multi_select(distributor_options),
+            vol.Optional(CONF_EXCLUDED_OPERATORS, default=self.options.get(CONF_EXCLUDED_OPERATORS, [])): cv.multi_select(operator_options),
+        })
+        return self.async_show_form(step_id="summary_filtering", data_schema=schema)
+
+    async def async_step_tyre_inflation(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle Tyre Inflation override options for re-configuration."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return self.async_create_entry(title="", data=self.options)
+
+        schema = vol.Schema({
+            vol.Optional(CONF_ADD_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "")}): str,
+            vol.Optional(CONF_REMOVE_TYRE_INFLATION_STATIONS, description={"suggested_value": self.options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "")}): str,
+        })
+        return self.async_show_form(step_id="tyre_inflation", data_schema=schema)
