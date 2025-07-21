@@ -1,14 +1,14 @@
 """The Tasmanian Fuel Prices integration."""
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, Event
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.dispatcher import dispatcher_send
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.const import Platform # type: ignore
+from homeassistant.core import HomeAssistant, Event # type: ignore
+from homeassistant.helpers.aiohttp_client import async_get_clientsession # type: ignore
+from homeassistant.helpers import device_registry as dr # type: ignore
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
+from homeassistant.helpers.event import async_track_state_change_event # type: ignore
+from homeassistant.helpers.dispatcher import dispatcher_send # type: ignore
 
 
 from .api import TasFuelAPI

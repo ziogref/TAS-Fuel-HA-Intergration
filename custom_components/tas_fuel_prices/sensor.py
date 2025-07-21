@@ -4,17 +4,17 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from math import radians, sin, cos, sqrt, atan2
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from homeassistant.components.sensor import SensorEntity # type: ignore
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.core import HomeAssistant, callback # type: ignore
+from homeassistant.helpers.entity import EntityCategory # type: ignore
+from homeassistant.helpers.entity_platform import AddEntitiesCallback # type: ignore
+from homeassistant.helpers.update_coordinator import ( # type: ignore
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.device_registry import DeviceInfo # type: ignore
+from homeassistant.helpers.dispatcher import async_dispatcher_connect # type: ignore
 
 from .api import TasFuelAPI
 from .const import (
@@ -146,7 +146,15 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added."""
         await super().async_added_to_hass()
-        # Listen for the signal to recalculate distance
+
+        # Listen for updates from the additional_data_coordinator to refresh attributes
+        self.async_on_remove(
+            self.additional_data_coordinator.async_add_listener(
+                self.async_schedule_update_ha_state, True
+            )
+        )
+
+        # Listen for the signal to recalculate distance from location changes
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,

@@ -1,12 +1,12 @@
 """API client for the Tasmanian Fuel Prices integration."""
 
 from datetime import datetime, timedelta, UTC
-import backoff
-import aiohttp
+import backoff # type: ignore
+import aiohttp # type: ignore
 import json
 import uuid
 
-from aiohttp import ClientError, ClientSession, ClientResponseError
+from aiohttp import ClientError, ClientSession, ClientResponseError # type: ignore
 
 from .const import (
     API_BASE_URL,
