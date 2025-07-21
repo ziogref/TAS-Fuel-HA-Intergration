@@ -75,6 +75,9 @@ CONF_RANGE = "range"
 CONF_EXCLUDED_DISTRIBUTORS = "excluded_distributors"
 CONF_EXCLUDED_OPERATORS = "excluded_operators"
 
+# Navigation Configuration
+CONF_NOTIFICATION_SERVICE = "notification_service"
+
 # Select Entity
 SELECT_FUEL_TYPE_ENTITY_NAME = "Fuel Type Selector"
 FUEL_TYPE_ORDER = [

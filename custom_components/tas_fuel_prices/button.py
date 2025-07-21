@@ -1,16 +1,28 @@
 """Button platform for Tasmanian Fuel Prices."""
 from __future__ import annotations
+import urllib.parse
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import SENSOR_DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import entity_registry as er
 
 from .api import TasFuelAPI
-from .const import DOMAIN, CONF_DEVICE_NAME
+from .const import (
+    DOMAIN,
+    CONF_DEVICE_NAME,
+    CONF_FUEL_TYPES,
+    CONF_NOTIFICATION_SERVICE,
+    ATTR_STATIONS,
+    ATTR_TYRE_INFLATION,
+    ATTR_ADDRESS,
+    LOGGER,
+)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -28,6 +40,23 @@ async def async_setup_entry(
         TasFuelRefreshPricesButton(price_coordinator),
         TasFuelRefreshAdditionalDataButton(price_coordinator, additional_data_coordinator),
     ]
+
+    # Create navigation buttons if a notification service is configured
+    notification_service = entry.options.get(CONF_NOTIFICATION_SERVICE)
+    if notification_service:
+        fuel_types = entry.options.get(CONF_FUEL_TYPES, [])
+        for fuel_type in fuel_types:
+            buttons.append(
+                NavigateToCheapestButton(
+                    hass, entry, fuel_type, notification_service
+                )
+            )
+            buttons.append(
+                NavigateToCheapestTyreButton(
+                    hass, entry, fuel_type, notification_service
+                )
+            )
+
     async_add_entities(buttons)
 
 
@@ -55,8 +84,6 @@ class TasFuelRefreshTokenButton(ButtonEntity):
     async def async_press(self) -> None:
         """Handle the button press."""
         await self._api_client.force_refresh_token()
-        # After forcing a token refresh, we also trigger a price refresh
-        # to immediately update all sensors, including the token expiry sensor.
         await self.coordinator.async_request_refresh()
 
 
@@ -108,7 +135,125 @@ class TasFuelRefreshAdditionalDataButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        # First, refresh the community-sourced data (discounts, amenities, etc.)
         await self.additional_data_coordinator.async_request_refresh()
-        # Then, refresh the prices to make the sensors update their state immediately with the new data.
         await self.price_coordinator.async_request_refresh()
+
+
+class BaseNavigateButton(ButtonEntity):
+    """Base class for navigation buttons."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        fuel_type: str,
+        notification_service: str,
+    ) -> None:
+        """Initialize the navigation button."""
+        self.hass = hass
+        self.entry = entry
+        self._fuel_type = fuel_type
+        self._notification_service = notification_service
+        self._attr_icon = "mdi:google-maps"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this button is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self.entry.entry_id}_{self._fuel_type}")},
+            name=f"{CONF_DEVICE_NAME} - {self._fuel_type}",
+            manufacturer="Custom Integration",
+            via_device=(DOMAIN, self.entry.entry_id),
+        )
+
+    async def _get_station_address(self, tyre_inflation_required: bool) -> str | None:
+        """Get the address of the desired station from the summary sensor."""
+        registry = er.async_get(self.hass)
+        summary_sensor_unique_id = f"{self.entry.entry_id}_{self._fuel_type}_cheapest_filtered"
+        summary_sensor_entity_id = registry.async_get_entity_id(
+            SENSOR_DOMAIN, DOMAIN, summary_sensor_unique_id
+        )
+
+        if not summary_sensor_entity_id:
+            LOGGER.warning(
+                "Could not find summary sensor with unique_id: %s",
+                summary_sensor_unique_id,
+            )
+            return None
+
+        sensor_state = self.hass.states.get(summary_sensor_entity_id)
+        if not sensor_state or not sensor_state.attributes.get(ATTR_STATIONS):
+            LOGGER.warning(
+                "Summary sensor %s has no state or station data.",
+                summary_sensor_entity_id,
+            )
+            return None
+
+        stations = sensor_state.attributes[ATTR_STATIONS]
+        target_station = None
+
+        if not tyre_inflation_required:
+            target_station = stations[0] if stations else None
+        else:
+            target_station = next(
+                (s for s in stations if s.get(ATTR_TYRE_INFLATION)), None
+            )
+
+        if not target_station:
+            LOGGER.warning(
+                "No suitable station found for navigation (Tyre Inflation Required: %s)",
+                tyre_inflation_required,
+            )
+            return None
+
+        return target_station.get(ATTR_ADDRESS)
+
+    async def async_press(self) -> None:
+        """This method should be implemented by subclasses."""
+        raise NotImplementedError
+
+
+class NavigateToCheapestButton(BaseNavigateButton):
+    """Button to navigate to the cheapest station."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._attr_name = f"Navigate to Cheapest {self._fuel_type}"
+        self._attr_unique_id = f"{self.entry.entry_id}_navigate_cheapest_{self._fuel_type}"
+
+    async def async_press(self) -> None:
+        """Handle the button press and send notification."""
+        address = await self._get_station_address(tyre_inflation_required=False)
+        if address:
+            uri = f"google.navigation:q={urllib.parse.quote(address)}"
+            service_domain, service_name = self._notification_service.split(".")
+            
+            await self.hass.services.async_call(
+                service_domain,
+                service_name,
+                {"message": "command_launch_uri", "uri": uri},
+                blocking=True,
+            )
+
+
+class NavigateToCheapestTyreButton(BaseNavigateButton):
+    """Button to navigate to the cheapest station with tyre inflation."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._attr_name = f"Navigate to Cheapest {self._fuel_type} (Tyres)"
+        self._attr_unique_id = f"{self.entry.entry_id}_navigate_cheapest_tyre_{self._fuel_type}"
+
+    async def async_press(self) -> None:
+        """Handle the button press and send notification."""
+        address = await self._get_station_address(tyre_inflation_required=True)
+        if address:
+            uri = f"google.navigation:q={urllib.parse.quote(address)}"
+            service_domain, service_name = self._notification_service.split(".")
+            
+            await self.hass.services.async_call(
+                service_domain,
+                service_name,
+                {"message": "command_launch_uri", "uri": uri},
+                blocking=True,
+            )
