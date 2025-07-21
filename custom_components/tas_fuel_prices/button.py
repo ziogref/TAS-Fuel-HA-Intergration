@@ -4,7 +4,8 @@ import urllib.parse
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant, ConfigEntry
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
