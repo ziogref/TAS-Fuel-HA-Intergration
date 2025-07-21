@@ -1,12 +1,12 @@
 """API client for the Tasmanian Fuel Prices integration."""
 
 from datetime import datetime, timedelta, UTC
-import backoff # type: ignore
-import aiohttp # type: ignore
+import backoff
+import aiohttp
 import json
 import uuid
 
-from aiohttp import ClientError, ClientSession, ClientResponseError # type: ignore
+from aiohttp import ClientError, ClientSession, ClientResponseError
 
 from .const import (
     API_BASE_URL,
@@ -16,7 +16,8 @@ from .const import (
     WOOLWORTHS_DISCOUNT_URL,
     RACT_DISCOUNT_URL,
     TYRE_INFLATION_URL,
-    DISTRIBUTORS_URL,
+    DISTRIBUTOR_URL,
+    OPERATORS_URL,
 )
 
 
@@ -143,6 +144,35 @@ class TasFuelAPI:
         self._access_token = None
         self._token_expiry = None
 
+    async def _fetch_github_directory_data(self, url: str, data_key: str) -> dict:
+        """Fetch and parse all .txt files from a GitHub directory."""
+        data_map = {}
+        try:
+            LOGGER.info("Fetching file list from %s for %s.", url, data_key)
+            response = await self._session.get(url)
+            response.raise_for_status()
+            files = await response.json()
+
+            for file_info in files:
+                if file_info.get("type") == "file" and file_info.get("name").endswith(".txt"):
+                    item_name = file_info["name"].replace(".txt", "")
+                    download_url = file_info["download_url"]
+                    LOGGER.debug("Fetching %s file: %s", data_key, download_url)
+                    
+                    item_response = await self._session.get(download_url)
+                    item_response.raise_for_status()
+                    text = await item_response.text()
+
+                    for line in text.splitlines():
+                        code_part = line.split('#', 1)[0]
+                        station_code = code_part.strip()
+                        if station_code:
+                            data_map[station_code] = item_name
+            LOGGER.info("Successfully processed %s %s mappings.", len(data_map), data_key)
+        except (ClientError, KeyError) as e:
+            LOGGER.error("Error fetching or processing %s data: %s", data_key, e)
+        return data_map
+
     @backoff.on_exception(backoff.expo, ClientError, max_tries=3, logger=LOGGER)
     async def fetch_additional_data_lists(self) -> dict:
         """Fetch the lists of station codes for discounts, amenities, and distributors from GitHub."""
@@ -161,14 +191,10 @@ class TasFuelAPI:
                 response.raise_for_status()
                 text = await response.text()
                 
-                # Process each line to extract the station code, ignoring comments.
                 station_codes = set()
                 for line in text.splitlines():
-                    # Take the part before the first '#', which acts as a comment character.
                     code_part = line.split('#', 1)[0]
-                    # Strip leading/trailing whitespace to handle various formatting.
                     station_code = code_part.strip()
-                    # Add to the set if the resulting string is not empty.
                     if station_code:
                         station_codes.add(station_code)
                 
@@ -176,36 +202,10 @@ class TasFuelAPI:
                 LOGGER.debug("Successfully fetched and parsed %s station codes for %s", len(station_codes), provider)
             except ClientError as e:
                 LOGGER.error("Error fetching additional data list for %s: %s", provider, e)
-                # If a list fails to download, provide an empty list to prevent errors
                 additional_data[provider] = []
         
-        # Fetch and process distributor data
-        distributors = {}
-        try:
-            LOGGER.info("Fetching distributor file list from GitHub.")
-            response = await self._session.get(DISTRIBUTORS_URL)
-            response.raise_for_status()
-            files = await response.json()
-
-            for file_info in files:
-                if file_info.get("type") == "file":
-                    distributor_name = file_info["name"].replace(".txt", "")
-                    download_url = file_info["download_url"]
-                    LOGGER.debug("Fetching distributor file: %s", download_url)
-                    
-                    dist_response = await self._session.get(download_url)
-                    dist_response.raise_for_status()
-                    text = await dist_response.text()
-
-                    for line in text.splitlines():
-                        code_part = line.split('#', 1)[0]
-                        station_code = code_part.strip()
-                        if station_code:
-                            distributors[station_code] = distributor_name
-            LOGGER.info("Successfully processed %s distributor mappings.", len(distributors))
-        except (ClientError, KeyError) as e:
-            LOGGER.error("Error fetching or processing distributor data: %s", e)
-
-        additional_data["distributors"] = distributors
+        # Fetch and process distributors and operators
+        additional_data["distributors"] = await self._fetch_github_directory_data(DISTRIBUTOR_URL, "distributor")
+        additional_data["operators"] = await self._fetch_github_directory_data(OPERATORS_URL, "operator")
         
         return additional_data

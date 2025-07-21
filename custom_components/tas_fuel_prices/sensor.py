@@ -4,17 +4,17 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from math import radians, sin, cos, sqrt, atan2
 
-from homeassistant.components.sensor import SensorEntity # type: ignore
-from homeassistant.config_entries import ConfigEntry # type: ignore
-from homeassistant.core import HomeAssistant, callback # type: ignore
-from homeassistant.helpers.entity import EntityCategory # type: ignore
-from homeassistant.helpers.entity_platform import AddEntitiesCallback # type: ignore
-from homeassistant.helpers.update_coordinator import ( # type: ignore
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.helpers.device_registry import DeviceInfo # type: ignore
-from homeassistant.helpers.dispatcher import async_dispatcher_connect # type: ignore
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .api import TasFuelAPI
 from .const import (
@@ -25,7 +25,8 @@ from .const import (
     ATTR_STATION_ID,
     ATTR_ADDRESS,
     ATTR_BRAND,
-    ATTR_FUEL_BRAND,
+    ATTR_DISTRIBUTOR,
+    ATTR_OPERATOR,
     ATTR_FUEL_TYPE,
     ATTR_LAST_UPDATED,
     ATTR_DISCOUNT_APPLIED,
@@ -235,16 +236,21 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             discount_applied_amount = 0.0
             discount_provider = "None"
             tyre_inflation = False
-            fuel_brand = "No data found"
+            distributor = "No data found"
+            operator = "No data found"
             options = self.entry.options
 
             # Check for and apply discounts and amenities
             if self.additional_data_coordinator.data:
                 additional_data = self.additional_data_coordinator.data
 
-                # Fuel Brand / Distributor
+                # Distributor (Fuel Brand)
                 distributors_map = additional_data.get("distributors", {})
-                fuel_brand = distributors_map.get(self._station_code, "No data found")
+                distributor = distributors_map.get(self._station_code, "No data found")
+
+                # Site Operator
+                operators_map = additional_data.get("operators", {})
+                operator = operators_map.get(self._station_code, "No data found")
 
                 # Discounts
                 if options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
@@ -321,7 +327,8 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_DISCOUNT_PROVIDER: discount_provider,
                 ATTR_USER_FAVOURITE: is_favourite,
                 ATTR_TYRE_INFLATION: tyre_inflation,
-                ATTR_FUEL_BRAND: fuel_brand,
+                ATTR_DISTRIBUTOR: distributor,
+                ATTR_OPERATOR: operator,
             }
             # Add geolocation attributes
             attributes.update(self._calculate_distance_attributes())
