@@ -188,7 +188,7 @@ class TasFuelAPI:
             files = await response.json()
 
             for file_info in files:
-                if file_info.get("type") == "file" and file_info.get("name").endswith(".txt"):
+                if file_info.get("type") == "file":
                     distributor_name = file_info["name"].replace(".txt", "")
                     download_url = file_info["download_url"]
                     LOGGER.debug("Fetching distributor file: %s", download_url)
