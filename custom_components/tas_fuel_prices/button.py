@@ -10,12 +10,15 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import DeviceInfo, DeviceRegistry
 from homeassistant.helpers import entity_registry as er, device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo, DeviceRegistry
+from homeassistant.helpers import entity_registry as er, device_registry as dr
 
 from .api import TasFuelAPI
 from .const import (
     DOMAIN,
     CONF_DEVICE_NAME,
     CONF_FUEL_TYPES,
+    CONF_LOCATION_ENTITY,
     CONF_LOCATION_ENTITY,
     ATTR_STATIONS,
     ATTR_TYRE_INFLATION,
@@ -42,12 +45,16 @@ async def async_setup_entry(
 
     # Create navigation buttons if a location entity is configured
     if entry.options.get(CONF_LOCATION_ENTITY):
+    # Create navigation buttons if a location entity is configured
+    if entry.options.get(CONF_LOCATION_ENTITY):
         fuel_types = entry.options.get(CONF_FUEL_TYPES, [])
         for fuel_type in fuel_types:
             buttons.append(
                 NavigateToCheapestButton(hass, entry, fuel_type)
+                NavigateToCheapestButton(hass, entry, fuel_type)
             )
             buttons.append(
+                NavigateToCheapestTyreButton(hass, entry, fuel_type)
                 NavigateToCheapestTyreButton(hass, entry, fuel_type)
             )
 
@@ -192,6 +199,41 @@ class BaseNavigateButton(ButtonEntity):
         )
         return None
 
+    
+    async def _get_notification_service(self) -> str | None:
+        """Dynamically find the notification service for the tracked device."""
+        location_entity_id = self.entry.options.get(CONF_LOCATION_ENTITY)
+        if not location_entity_id:
+            LOGGER.error("Navigation button pressed, but no location entity is configured.")
+            return None
+
+        ent_reg = er.async_get(self.hass)
+        entity_entry = ent_reg.async_get(location_entity_id)
+        if not entity_entry or not entity_entry.device_id:
+            LOGGER.error(
+                "Could not find a device linked to the location entity: %s",
+                location_entity_id,
+            )
+            return None
+
+        dev_reg = dr.async_get(self.hass)
+        device = dev_reg.async_get(entity_entry.device_id)
+        if not device:
+            LOGGER.error("Could not find device with ID: %s", entity_entry.device_id)
+            return None
+
+        # Construct the expected service name from the device name
+        service_name = f"mobile_app_{device.name.lower().replace(' ', '_')}"
+        if self.hass.services.has_service("notify", service_name):
+            return f"notify.{service_name}"
+        
+        LOGGER.error(
+            "Found device '%s', but could not find the corresponding notification service 'notify.%s'",
+            device.name,
+            service_name,
+        )
+        return None
+
 
     async def _get_station_address(self, tyre_inflation_required: bool) -> str | None:
         """Get the address of the desired station from the summary sensor."""
@@ -254,12 +296,17 @@ class NavigateToCheapestButton(BaseNavigateButton):
         notification_service = await self._get_notification_service()
 
         if address and notification_service:
+        notification_service = await self._get_notification_service()
+
+        if address and notification_service:
             uri = f"google.navigation:q={urllib.parse.quote(address)}"
+            service_domain, service_name = notification_service.split(".")
             service_domain, service_name = notification_service.split(".")
             
             await self.hass.services.async_call(
                 service_domain,
                 service_name,
+                {"message": "command_launch_uri", "data": {"uri": uri}},
                 {"message": "command_launch_uri", "data": {"uri": uri}},
                 blocking=True,
             )
@@ -279,12 +326,17 @@ class NavigateToCheapestTyreButton(BaseNavigateButton):
         notification_service = await self._get_notification_service()
 
         if address and notification_service:
+        notification_service = await self._get_notification_service()
+
+        if address and notification_service:
             uri = f"google.navigation:q={urllib.parse.quote(address)}"
+            service_domain, service_name = notification_service.split(".")
             service_domain, service_name = notification_service.split(".")
             
             await self.hass.services.async_call(
                 service_domain,
                 service_name,
+                {"message": "command_launch_uri", "data": {"uri": uri}},
                 {"message": "command_launch_uri", "data": {"uri": uri}},
                 blocking=True,
             )
