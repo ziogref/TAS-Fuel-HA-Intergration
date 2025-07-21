@@ -16,8 +16,6 @@ from homeassistant.helpers.selector import (
     NumberSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
-    TextSelector,
-    TextSelectorConfig,
 )
 
 
@@ -43,7 +41,6 @@ from .const import (
     CONF_RANGE,
     CONF_EXCLUDED_DISTRIBUTORS,
     CONF_EXCLUDED_OPERATORS,
-    CONF_NOTIFICATION_SERVICE,
     DISTRIBUTOR_URL,
     OPERATORS_URL,
 )
@@ -192,7 +189,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle geolocation options."""
         if user_input is not None:
             self.options.update(user_input)
-            return await self.async_step_navigation()
+            return await self.async_step_summary_filtering()
 
         schema = vol.Schema({
             vol.Optional(CONF_LOCATION_ENTITY): EntitySelector(
@@ -203,19 +200,6 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         })
         return self.async_show_form(step_id="geolocation", data_schema=schema)
-
-    async def async_step_navigation(self, user_input: dict[str, Any] | None = None):
-        """Handle navigation options."""
-        if user_input is not None:
-            self.options.update(user_input)
-            return await self.async_step_summary_filtering()
-
-        schema = vol.Schema({
-            vol.Optional(CONF_NOTIFICATION_SERVICE): TextSelector(
-                TextSelectorConfig(type="text")
-            ),
-        })
-        return self.async_show_form(step_id="navigation", data_schema=schema)
 
     async def async_step_summary_filtering(self, user_input: dict[str, Any] | None = None):
         """Handle summary sensor filtering options."""
@@ -344,7 +328,7 @@ class OptionsFlowHandler(OptionsFlow):
         """Handle geolocation options for re-configuration."""
         if user_input is not None:
             self.options.update(user_input)
-            return await self.async_step_navigation()
+            return await self.async_step_summary_filtering()
 
         schema = vol.Schema({
             vol.Optional(
@@ -360,20 +344,6 @@ class OptionsFlowHandler(OptionsFlow):
             ),
         })
         return self.async_show_form(step_id="geolocation", data_schema=schema)
-
-    async def async_step_navigation(self, user_input: dict[str, Any] | None = None):
-        """Handle navigation options for re-configuration."""
-        if user_input is not None:
-            self.options.update(user_input)
-            return await self.async_step_summary_filtering()
-
-        schema = vol.Schema({
-            vol.Optional(
-                CONF_NOTIFICATION_SERVICE,
-                description={"suggested_value": self.options.get(CONF_NOTIFICATION_SERVICE)},
-            ): TextSelector(TextSelectorConfig(type="text")),
-        })
-        return self.async_show_form(step_id="navigation", data_schema=schema)
 
     async def async_step_summary_filtering(self, user_input: dict[str, Any] | None = None):
         """Handle summary sensor filtering options for re-configuration."""

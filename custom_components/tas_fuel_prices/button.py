@@ -3,21 +3,20 @@ from __future__ import annotations
 import urllib.parse
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import SENSOR_DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo, DeviceRegistry
+from homeassistant.helpers import entity_registry as er, device_registry as dr
 
 from .api import TasFuelAPI
 from .const import (
     DOMAIN,
     CONF_DEVICE_NAME,
     CONF_FUEL_TYPES,
-    CONF_NOTIFICATION_SERVICE,
+    CONF_LOCATION_ENTITY,
     ATTR_STATIONS,
     ATTR_TYRE_INFLATION,
     ATTR_ADDRESS,
@@ -41,20 +40,15 @@ async def async_setup_entry(
         TasFuelRefreshAdditionalDataButton(price_coordinator, additional_data_coordinator),
     ]
 
-    # Create navigation buttons if a notification service is configured
-    notification_service = entry.options.get(CONF_NOTIFICATION_SERVICE)
-    if notification_service:
+    # Create navigation buttons if a location entity is configured
+    if entry.options.get(CONF_LOCATION_ENTITY):
         fuel_types = entry.options.get(CONF_FUEL_TYPES, [])
         for fuel_type in fuel_types:
             buttons.append(
-                NavigateToCheapestButton(
-                    hass, entry, fuel_type, notification_service
-                )
+                NavigateToCheapestButton(hass, entry, fuel_type)
             )
             buttons.append(
-                NavigateToCheapestTyreButton(
-                    hass, entry, fuel_type, notification_service
-                )
+                NavigateToCheapestTyreButton(hass, entry, fuel_type)
             )
 
     async_add_entities(buttons)
@@ -147,13 +141,11 @@ class BaseNavigateButton(ButtonEntity):
         hass: HomeAssistant,
         entry: ConfigEntry,
         fuel_type: str,
-        notification_service: str,
     ) -> None:
         """Initialize the navigation button."""
         self.hass = hass
         self.entry = entry
         self._fuel_type = fuel_type
-        self._notification_service = notification_service
         self._attr_icon = "mdi:google-maps"
 
     @property
@@ -165,6 +157,41 @@ class BaseNavigateButton(ButtonEntity):
             manufacturer="Custom Integration",
             via_device=(DOMAIN, self.entry.entry_id),
         )
+    
+    async def _get_notification_service(self) -> str | None:
+        """Dynamically find the notification service for the tracked device."""
+        location_entity_id = self.entry.options.get(CONF_LOCATION_ENTITY)
+        if not location_entity_id:
+            LOGGER.error("Navigation button pressed, but no location entity is configured.")
+            return None
+
+        ent_reg = er.async_get(self.hass)
+        entity_entry = ent_reg.async_get(location_entity_id)
+        if not entity_entry or not entity_entry.device_id:
+            LOGGER.error(
+                "Could not find a device linked to the location entity: %s",
+                location_entity_id,
+            )
+            return None
+
+        dev_reg = dr.async_get(self.hass)
+        device = dev_reg.async_get(entity_entry.device_id)
+        if not device:
+            LOGGER.error("Could not find device with ID: %s", entity_entry.device_id)
+            return None
+
+        # Construct the expected service name from the device name
+        service_name = f"mobile_app_{device.name.lower().replace(' ', '_')}"
+        if self.hass.services.has_service("notify", service_name):
+            return f"notify.{service_name}"
+        
+        LOGGER.error(
+            "Found device '%s', but could not find the corresponding notification service 'notify.%s'",
+            device.name,
+            service_name,
+        )
+        return None
+
 
     async def _get_station_address(self, tyre_inflation_required: bool) -> str | None:
         """Get the address of the desired station from the summary sensor."""
@@ -224,14 +251,16 @@ class NavigateToCheapestButton(BaseNavigateButton):
     async def async_press(self) -> None:
         """Handle the button press and send notification."""
         address = await self._get_station_address(tyre_inflation_required=False)
-        if address:
+        notification_service = await self._get_notification_service()
+
+        if address and notification_service:
             uri = f"google.navigation:q={urllib.parse.quote(address)}"
-            service_domain, service_name = self._notification_service.split(".")
+            service_domain, service_name = notification_service.split(".")
             
             await self.hass.services.async_call(
                 service_domain,
                 service_name,
-                {"message": "command_launch_uri", "uri": uri},
+                {"message": "command_launch_uri", "data": {"uri": uri}},
                 blocking=True,
             )
 
@@ -247,13 +276,15 @@ class NavigateToCheapestTyreButton(BaseNavigateButton):
     async def async_press(self) -> None:
         """Handle the button press and send notification."""
         address = await self._get_station_address(tyre_inflation_required=True)
-        if address:
+        notification_service = await self._get_notification_service()
+
+        if address and notification_service:
             uri = f"google.navigation:q={urllib.parse.quote(address)}"
-            service_domain, service_name = self._notification_service.split(".")
+            service_domain, service_name = notification_service.split(".")
             
             await self.hass.services.async_call(
                 service_domain,
                 service_name,
-                {"message": "command_launch_uri", "uri": uri},
+                {"message": "command_launch_uri", "data": {"uri": uri}},
                 blocking=True,
             )
