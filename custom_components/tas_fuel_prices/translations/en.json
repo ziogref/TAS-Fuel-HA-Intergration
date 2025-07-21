@@ -45,20 +45,20 @@
           "ract_additional_stations": "Additional Station Codes (comma-separated)"
         }
       },
+      "geolocation": {
+        "title": "Optional: Geolocation Settings",
+        "description": "If you wish, select a device tracker, person, or zone entity to calculate the distance to stations. If you leave this blank, this feature will be disabled.",
+        "data": {
+          "location_entity": "Location Entity",
+          "range": "Range (km)"
+        }
+      },
       "tyre_inflation": {
         "title": "Optional: Tyre Inflation Adjustments",
         "description": "This page is optional. If you don't know what to do, leave the fields blank and click submit.\n\nYou can use this to correct the community-sourced list of stations with tyre inflation. For example, add a station that has a new machine, or remove a station where the machine is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
-        }
-      },
-      "geolocation": {
-        "title": "Geolocation Settings",
-        "description": "Select a device tracker, person, or zone entity to calculate distance to stations. If no entity is selected, all stations will be considered 'in range'.",
-        "data": {
-          "location_entity": "Location Entity",
-          "range": "Range (km)"
         }
       }
     },
@@ -107,20 +107,20 @@
           "ract_additional_stations": "Additional Station Codes (comma-separated)"
         }
       },
+      "geolocation": {
+        "title": "Optional: Geolocation Settings",
+        "description": "If you wish, select a device tracker, person, or zone entity to calculate the distance to stations. If you leave this blank, this feature will be disabled.",
+        "data": {
+          "location_entity": "Location Entity",
+          "range": "Range (km)"
+        }
+      },
       "tyre_inflation": {
         "title": "Optional: Tyre Inflation Adjustments",
         "description": "This page is optional. If you don't know what to do, leave the fields blank and click submit.\n\nYou can use this to correct the community-sourced list of stations with tyre inflation. For example, add a station that has a new machine, or remove a station where the machine is broken.\n\nTo contribute to the main list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
         "data": {
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
-        }
-      },
-      "geolocation": {
-        "title": "Geolocation Settings",
-        "description": "Select a device tracker, person, or zone entity to calculate distance to stations. If no entity is selected, all stations will be considered 'in range'.",
-        "data": {
-          "location_entity": "Location Entity",
-          "range": "Range (km)"
         }
       }
     }
@@ -140,6 +140,12 @@
     "sensor": {
       "token_expiry": {
         "name": "Access Token Expiry"
+      },
+      "prices_last_updated": {
+        "name": "Prices Last Updated"
+      },
+      "additional_data_last_updated": {
+        "name": "Additional Data Last Updated"
       }
     }
   }
