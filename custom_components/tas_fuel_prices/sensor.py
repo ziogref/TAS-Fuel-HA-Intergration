@@ -25,6 +25,7 @@ from .const import (
     ATTR_STATION_ID,
     ATTR_ADDRESS,
     ATTR_BRAND,
+    ATTR_FUEL_BRAND,
     ATTR_FUEL_TYPE,
     ATTR_LAST_UPDATED,
     ATTR_DISCOUNT_APPLIED,
@@ -192,11 +193,11 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
 
     @callback
     def async_recalculate_distance(self) -> None:
-        """Recalculate distance attributes for Android Auto updates."""
+        """Recalculate distance attributes when the location entity updates."""
         if not self.coordinator.data or not self._attr_extra_state_attributes:
             return
 
-        LOGGER.debug("Recalculating distance for %s due to AA update", self.entity_id)
+        LOGGER.debug("Recalculating distance for %s due to location update", self.entity_id)
         new_geo_attrs = self._calculate_distance_attributes()
         self._attr_extra_state_attributes.update(new_geo_attrs)
         self.async_write_ha_state()
@@ -226,11 +227,16 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             discount_applied_amount = 0.0
             discount_provider = "None"
             tyre_inflation = False
+            fuel_brand = "No data found"
             options = self.entry.options
 
             # Check for and apply discounts and amenities
             if self.additional_data_coordinator.data:
                 additional_data = self.additional_data_coordinator.data
+
+                # Fuel Brand / Distributor
+                distributors_map = additional_data.get("distributors", {})
+                fuel_brand = distributors_map.get(self._station_code, "No data found")
 
                 # Discounts
                 if options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
@@ -307,6 +313,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_DISCOUNT_PROVIDER: discount_provider,
                 ATTR_USER_FAVOURITE: is_favourite,
                 ATTR_TYRE_INFLATION: tyre_inflation,
+                ATTR_FUEL_BRAND: fuel_brand,
             }
             # Add geolocation attributes
             attributes.update(self._calculate_distance_attributes())

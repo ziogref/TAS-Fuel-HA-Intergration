@@ -15,6 +15,7 @@ ATTR_FUEL_TYPE = "fuel_type"
 ATTR_LAST_UPDATED = "last_updated"
 ATTR_ADDRESS = "address"
 ATTR_BRAND = "brand"
+ATTR_FUEL_BRAND = "fuel_brand"
 ATTR_DISCOUNT_APPLIED = "discount_applied"
 ATTR_DISCOUNT_PROVIDER = "discount_provider"
 ATTR_USER_FAVOURITE = "user_favourite"
@@ -33,6 +34,7 @@ API_HEADERS = {
 
 # Additional Data URLs from external repo
 BASE_DATA_URL = "https://raw.githubusercontent.com/ziogref/TAS-Fuel-HA-Additional-Data/main/"
+DISTRIBUTORS_URL = "https://api.github.com/repos/ziogref/TAS-Fuel-HA-Additional-Data/contents/Distributors"
 WOOLWORTHS_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/Woolworths.txt"
 COLES_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/Coles.txt"
 RACT_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/RACT.txt"

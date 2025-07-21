@@ -16,6 +16,7 @@ from .const import (
     WOOLWORTHS_DISCOUNT_URL,
     RACT_DISCOUNT_URL,
     TYRE_INFLATION_URL,
+    DISTRIBUTORS_URL,
 )
 
 
@@ -144,7 +145,7 @@ class TasFuelAPI:
 
     @backoff.on_exception(backoff.expo, ClientError, max_tries=3, logger=LOGGER)
     async def fetch_additional_data_lists(self) -> dict:
-        """Fetch the lists of station codes for discounts and amenities from GitHub."""
+        """Fetch the lists of station codes for discounts, amenities, and distributors from GitHub."""
         LOGGER.info("Fetching additional data lists from GitHub.")
         additional_data = {}
         urls = {
@@ -177,5 +178,34 @@ class TasFuelAPI:
                 LOGGER.error("Error fetching additional data list for %s: %s", provider, e)
                 # If a list fails to download, provide an empty list to prevent errors
                 additional_data[provider] = []
+        
+        # Fetch and process distributor data
+        distributors = {}
+        try:
+            LOGGER.info("Fetching distributor file list from GitHub.")
+            response = await self._session.get(DISTRIBUTORS_URL)
+            response.raise_for_status()
+            files = await response.json()
+
+            for file_info in files:
+                if file_info.get("type") == "file" and file_info.get("name").endswith(".txt"):
+                    distributor_name = file_info["name"].replace(".txt", "")
+                    download_url = file_info["download_url"]
+                    LOGGER.debug("Fetching distributor file: %s", download_url)
+                    
+                    dist_response = await self._session.get(download_url)
+                    dist_response.raise_for_status()
+                    text = await dist_response.text()
+
+                    for line in text.splitlines():
+                        code_part = line.split('#', 1)[0]
+                        station_code = code_part.strip()
+                        if station_code:
+                            distributors[station_code] = distributor_name
+            LOGGER.info("Successfully processed %s distributor mappings.", len(distributors))
+        except (ClientError, KeyError) as e:
+            LOGGER.error("Error fetching or processing distributor data: %s", e)
+
+        additional_data["distributors"] = distributors
         
         return additional_data
