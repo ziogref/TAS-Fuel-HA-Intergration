@@ -20,6 +20,13 @@ from .const import (
     OPERATORS_URL,
 )
 
+# Define cache-busting headers to ensure fresh data from GitHub
+CACHE_BUSTING_HEADERS = {
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+}
+
 
 class TasFuelAPI:
     """A class for handling the data retrieval from the FuelCheck API."""
@@ -149,7 +156,7 @@ class TasFuelAPI:
         data_map = {}
         try:
             LOGGER.info("Fetching file list from %s for %s.", url, data_key)
-            response = await self._session.get(url)
+            response = await self._session.get(url, headers=CACHE_BUSTING_HEADERS)
             response.raise_for_status()
             files = await response.json()
 
@@ -159,7 +166,7 @@ class TasFuelAPI:
                     download_url = file_info["download_url"]
                     LOGGER.debug("Fetching %s file: %s", data_key, download_url)
                     
-                    item_response = await self._session.get(download_url)
+                    item_response = await self._session.get(download_url, headers=CACHE_BUSTING_HEADERS)
                     item_response.raise_for_status()
                     text = await item_response.text()
 
@@ -187,7 +194,7 @@ class TasFuelAPI:
 
         for provider, url in urls.items():
             try:
-                response = await self._session.get(url)
+                response = await self._session.get(url, headers=CACHE_BUSTING_HEADERS)
                 response.raise_for_status()
                 text = await response.text()
                 
