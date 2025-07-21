@@ -23,6 +23,7 @@ ATTR_USER_FAVOURITE = "user_favourite"
 ATTR_TYRE_INFLATION = "tyre_inflation"
 ATTR_IN_RANGE = "in_range"
 ATTR_DISTANCE = "distance"
+ATTR_STATIONS = "stations" # For summary sensors
 
 
 # API Configuration

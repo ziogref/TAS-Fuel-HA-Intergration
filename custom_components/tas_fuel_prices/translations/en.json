@@ -146,6 +146,9 @@
       },
       "additional_data_last_updated": {
         "name": "Additional Data Last Updated"
+      },
+      "cheapest_near_me_summary": {
+        "name": "{fuel_type} Cheapest Near Me"
       }
     }
   }

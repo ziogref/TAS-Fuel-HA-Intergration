@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from math import radians, sin, cos, sqrt, atan2
+import operator
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
@@ -36,6 +37,7 @@ from .const import (
     ATTR_TYRE_INFLATION,
     ATTR_IN_RANGE,
     ATTR_DISTANCE,
+    ATTR_STATIONS,
     LOGGER,
     CONF_ENABLE_COLES_DISCOUNT,
     CONF_COLES_DISCOUNT_AMOUNT,
@@ -81,6 +83,14 @@ async def async_setup_entry(
         TasFuelPricesLastUpdatedSensor(price_coordinator),
         TasFuelAdditionalDataLastUpdatedSensor(additional_data_coordinator),
     ]
+
+    # Create summary sensors for each fuel type
+    for fuel_type in fuel_types:
+        sensors.append(
+            TasFuelCheapestNearMeSummarySensor(
+                price_coordinator, additional_data_coordinator, entry, fuel_type, hass
+            )
+        )
 
     if price_coordinator.data:
         all_stations = price_coordinator.data.get('stations', [])
@@ -344,6 +354,172 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_FUEL_TYPE: self._fuel_type,
                 "error": "Price not available for this station and fuel type",
             }
+
+class TasFuelCheapestNearMeSummarySensor(CoordinatorEntity, SensorEntity):
+    """Representation of a summary sensor for the cheapest stations nearby."""
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        price_coordinator: DataUpdateCoordinator,
+        additional_data_coordinator: DataUpdateCoordinator,
+        entry: ConfigEntry,
+        fuel_type: str,
+        hass: HomeAssistant,
+    ) -> None:
+        """Initialize the summary sensor."""
+        super().__init__(price_coordinator)
+        self.additional_data_coordinator = additional_data_coordinator
+        self.entry = entry
+        self._fuel_type = fuel_type
+        self.hass = hass
+
+        self._attr_name = f"{fuel_type} Cheapest Near Me"
+        self._attr_unique_id = f"{entry.entry_id}_{fuel_type}_cheapest_near_me"
+        self._attr_icon = "mdi:map-marker-radius"
+        self._attr_native_unit_of_measurement = "AUD/L"
+        self._attr_extra_state_attributes = {ATTR_STATIONS: []}
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this sensor is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.additional_data_coordinator.async_add_listener(self._handle_coordinator_update)
+        )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                f"{DOMAIN}_{self.entry.entry_id}_recalculate_distance",
+                self._handle_coordinator_update,
+            )
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from any coordinator."""
+        self._update_state()
+        self.async_write_ha_state()
+
+    def _update_state(self) -> None:
+        """Update the state and attributes of the summary sensor."""
+        if not self.coordinator.data or not self.additional_data_coordinator.data:
+            self._attr_native_value = None
+            return
+
+        all_stations_info = self.coordinator.data.get('stations', [])
+        all_prices = self.coordinator.data.get('prices', [])
+        additional_data = self.additional_data_coordinator.data
+        options = self.entry.options
+
+        # --- Build a comprehensive list of all stations for this fuel type ---
+        all_processed_stations = []
+        for station_info in all_stations_info:
+            station_code = str(station_info.get("code"))
+            price_info = next((p for p in all_prices if str(p.get("stationcode")) == station_code and p.get("fueltype") == self._fuel_type), None)
+
+            if not price_info or price_info.get('price') is None:
+                continue
+
+            # Calculate distance and check if in range
+            dist_attrs = self._calculate_distance_attributes(station_info)
+            if not dist_attrs[ATTR_IN_RANGE]:
+                continue
+
+            # Calculate discounts
+            price = float(price_info.get('price'))
+            discounted_price = price
+            
+            if options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
+                woolworths_stations = set(additional_data.get("woolworths", []) + [s.strip() for s in options.get(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, "").split(',') if s.strip()])
+                if station_code in woolworths_stations:
+                    discounted_price -= float(options.get(CONF_WOOLWORTHS_DISCOUNT_AMOUNT, 0))
+            
+            if discounted_price == price and options.get(CONF_ENABLE_COLES_DISCOUNT):
+                coles_stations = set(additional_data.get("coles", []) + [s.strip() for s in options.get(CONF_COLES_ADDITIONAL_STATIONS, "").split(',') if s.strip()])
+                if station_code in coles_stations:
+                    discounted_price -= float(options.get(CONF_COLES_DISCOUNT_AMOUNT, 0))
+
+            if discounted_price == price and options.get(CONF_ENABLE_RACT_DISCOUNT):
+                ract_stations = set(additional_data.get("ract", []) + [s.strip() for s in options.get(CONF_RACT_ADDITIONAL_STATIONS, "").split(',') if s.strip()])
+                if station_code in ract_stations:
+                    discounted_price -= float(options.get(CONF_RACT_DISCOUNT_AMOUNT, 0))
+
+            # Check tyre inflation
+            tyre_inflation_list = set(additional_data.get("tyre_inflation", []))
+            add_list = {s.strip() for s in options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
+            remove_list = {s.strip() for s in options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
+            has_tyres = station_code in add_list or (station_code in tyre_inflation_list and station_code not in remove_list)
+
+            all_processed_stations.append({
+                "name": station_info.get("name"),
+                "address": station_info.get("address"),
+                "code": station_code,
+                "price": round(price / 100.0, 3),
+                "discounted_price": round(discounted_price / 100.0, 3),
+                "distributor": additional_data.get("distributors", {}).get(station_code, "No data found"),
+                "operator": additional_data.get("operators", {}).get(station_code, "No data found"),
+                ATTR_TYRE_INFLATION: has_tyres,
+                **dist_attrs,
+            })
+
+        if not all_processed_stations:
+            self._attr_native_value = None
+            self._attr_extra_state_attributes[ATTR_STATIONS] = []
+            return
+
+        # --- Apply summary logic ---
+        # Sort all in-range stations by discounted price
+        sorted_stations = sorted(all_processed_stations, key=operator.itemgetter("discounted_price"))
+        
+        cheapest_overall = sorted_stations[0]
+        cheapest_with_tyres = next((s for s in sorted_stations if s[ATTR_TYRE_INFLATION]), None)
+
+        summary_list = []
+        if cheapest_with_tyres and cheapest_with_tyres["code"] == cheapest_overall["code"]:
+            summary_list.append(cheapest_overall)
+        elif cheapest_with_tyres:
+            summary_list.append(cheapest_overall)
+            summary_list.append(cheapest_with_tyres)
+        else: # No stations with tyres in range
+            summary_list.append(cheapest_overall)
+
+        self._attr_native_value = cheapest_overall["discounted_price"]
+        self._attr_extra_state_attributes[ATTR_STATIONS] = summary_list
+
+    def _calculate_distance_attributes(self, station_info: dict) -> dict:
+        """Helper to calculate distance for a single station."""
+        location_entity_id = self.entry.options.get(CONF_LOCATION_ENTITY)
+        if not location_entity_id:
+            return {ATTR_DISTANCE: "Not Configured", ATTR_IN_RANGE: True}
+
+        range_km = self.entry.options.get(CONF_RANGE, 5)
+        distance = None
+        is_in_range = True
+
+        if station_info and station_info.get("location"):
+            location_state = self.hass.states.get(location_entity_id)
+            if location_state and 'latitude' in location_state.attributes and 'longitude' in location_state.attributes:
+                phone_lat = location_state.attributes['latitude']
+                phone_lon = location_state.attributes['longitude']
+                station_lat = station_info["location"]["latitude"]
+                station_lon = station_info["location"]["longitude"]
+
+                if phone_lat and phone_lon and station_lat and station_lon:
+                    distance = haversine(phone_lat, phone_lon, station_lat, station_lon)
+                    is_in_range = distance <= range_km
+        
+        return {
+            ATTR_DISTANCE: f"{distance:.2f} km" if distance is not None else "Unknown",
+            ATTR_IN_RANGE: is_in_range,
+        }
 
 class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
     """Representation of a sensor that shows token expiry."""
