@@ -41,10 +41,8 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         hass.config_entries.async_update_entry(
             config_entry,
             options=new_options,
+            version=9  # Update the version as part of the entry update
         )
-        # Manually update the version after updating options
-        config_entry.version = 9
-
 
     LOGGER.info("Migration to version %s successful", config_entry.version)
     return True
