@@ -1,14 +1,14 @@
 """The Tasmanian Fuel Prices integration."""
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry # type: ignore
-from homeassistant.const import Platform # type: ignore
-from homeassistant.core import HomeAssistant, Event # type: ignore
-from homeassistant.helpers.aiohttp_client import async_get_clientsession # type: ignore
-from homeassistant.helpers import device_registry as dr # type: ignore
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
-from homeassistant.helpers.event import async_track_state_change_event # type: ignore
-from homeassistant.helpers.dispatcher import dispatcher_send # type: ignore
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant, Event
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.dispatcher import dispatcher_send
 
 
 from .api import TasFuelAPI
@@ -21,9 +21,33 @@ from .const import (
     CONF_API_SECRET,
     CONF_DEVICE_NAME,
     CONF_LOCATION_ENTITY,
+    CONF_EXCLUDED_DISTRIBUTORS,
+    CONF_EXCLUDED_OPERATORS,
 )
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON, Platform.SELECT]
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old entry."""
+    LOGGER.info("Migrating config entry from version %s", config_entry.version)
+
+    if config_entry.version < 9:
+        new_options = dict(config_entry.options)
+        # Add the new exclusion lists with default empty values if they don't exist
+        new_options.setdefault(CONF_EXCLUDED_DISTRIBUTORS, [])
+        new_options.setdefault(CONF_EXCLUDED_OPERATORS, [])
+        
+        hass.config_entries.async_update_entry(
+            config_entry,
+            options=new_options,
+        )
+        # Manually update the version after updating options
+        config_entry.version = 9
+
+
+    LOGGER.info("Migration to version %s successful", config_entry.version)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -37,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
         manufacturer="Custom Integration",
-        model="1.7.0", # Version bump
+        model="1.8.0", # Version bump
     )
 
     session = async_get_clientsession(hass)
