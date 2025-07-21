@@ -553,13 +553,12 @@ class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
         excluded_distributors = set(options.get(CONF_EXCLUDED_DISTRIBUTORS, []))
         excluded_operators = set(options.get(CONF_EXCLUDED_OPERATORS, []))
 
-        # First, only consider stations that are in range
-        in_range_stations = [s for s in all_stations if s[ATTR_IN_RANGE]]
-
-        # Now, apply the user's exclusion filters
+        # Filter stations that are in range and not excluded by the user
         filtered_stations = [
-            s for s in in_range_stations
-            if s["distributor"] not in excluded_distributors and s["operator"] not in excluded_operators
+            s for s in all_stations
+            if s.get(ATTR_IN_RANGE, False) and
+               s.get("distributor") not in excluded_distributors and
+               s.get("operator") not in excluded_operators
         ]
 
         if not filtered_stations:
