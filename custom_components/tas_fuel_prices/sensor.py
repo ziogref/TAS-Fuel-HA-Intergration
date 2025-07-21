@@ -569,29 +569,14 @@ class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
         # Sort the filtered stations to find the cheapest
         sorted_stations = sorted(filtered_stations, key=operator.itemgetter("discounted_price"))
         
-        # Find the overall cheapest station from the filtered list
-        cheapest_overall = sorted_stations[0]
+        # The single cheapest station is the first one in the sorted list
+        cheapest_station = sorted_stations[0]
         
-        # Find the cheapest station with tyre inflation from the filtered list
-        cheapest_with_tyres = next((s for s in sorted_stations if s.get(ATTR_TYRE_INFLATION)), None)
-
-        # Build the summary list, max 2 stations
-        summary_list = []
-        # If the cheapest overall has tyres, it's the only one we need to show
-        if cheapest_with_tyres and cheapest_with_tyres["code"] == cheapest_overall["code"]:
-            summary_list.append(cheapest_overall)
-        # If they are different, show both
-        elif cheapest_with_tyres:
-            summary_list.append(cheapest_overall)
-            summary_list.append(cheapest_with_tyres)
-        # If no station with tyres is found, just show the overall cheapest
-        else:
-            summary_list.append(cheapest_overall)
+        # Set the state to the cheapest station's price
+        self._attr_native_value = cheapest_station["discounted_price"]
         
-        # Set the state to the overall cheapest price
-        self._attr_native_value = cheapest_overall["discounted_price"]
-        # Update the attribute with the new summary list
-        self._attr_extra_state_attributes[ATTR_STATIONS] = summary_list
+        # The attributes will now only contain this single station
+        self._attr_extra_state_attributes[ATTR_STATIONS] = [cheapest_station]
 
 
 class TasFuelTokenExpirySensor(CoordinatorEntity, SensorEntity):
