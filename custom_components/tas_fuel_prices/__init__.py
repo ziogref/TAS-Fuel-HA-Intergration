@@ -21,31 +21,9 @@ from .const import (
     CONF_API_SECRET,
     CONF_DEVICE_NAME,
     CONF_LOCATION_ENTITY,
-    CONF_EXCLUDED_DISTRIBUTORS,
-    CONF_EXCLUDED_OPERATORS,
 )
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON, Platform.SELECT]
-
-
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Migrate old entry."""
-    LOGGER.info("Migrating config entry from version %s", config_entry.version)
-
-    if config_entry.version < 9:
-        new_options = dict(config_entry.options)
-        # Add the new exclusion lists with default empty values if they don't exist
-        new_options.setdefault(CONF_EXCLUDED_DISTRIBUTORS, [])
-        new_options.setdefault(CONF_EXCLUDED_OPERATORS, [])
-        
-        hass.config_entries.async_update_entry(
-            config_entry,
-            options=new_options,
-            version=9  # Update the version as part of the entry update
-        )
-
-    LOGGER.info("Migration to version %s successful", config_entry.version)
-    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -59,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
         manufacturer="Custom Integration",
-        model="1.8.2", # Version bump
+        model="1.0.0",
     )
 
     session = async_get_clientsession(hass)
