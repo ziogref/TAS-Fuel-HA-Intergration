@@ -48,6 +48,9 @@ from .const import (
     CONF_ENABLE_RACT_DISCOUNT,
     CONF_RACT_DISCOUNT_AMOUNT,
     CONF_RACT_ADDITIONAL_STATIONS,
+    CONF_ENABLE_UNITED_DISCOUNT,
+    CONF_UNITED_DISCOUNT_AMOUNT,
+    CONF_UNITED_ADDITIONAL_STATIONS,
     CONF_ADD_TYRE_INFLATION_STATIONS,
     CONF_REMOVE_TYRE_INFLATION_STATIONS,
     CONF_LOCATION_ENTITY,
@@ -296,6 +299,14 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                         discount_applied_amount = float(options.get(CONF_RACT_DISCOUNT_AMOUNT, 0))
                         price -= discount_applied_amount
                         discount_provider = "RACT"
+
+                if discount_provider == "None" and options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                    additional_united = [s.strip() for s in options.get(CONF_UNITED_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
+                    united_stations = set(additional_data.get("united", []) + additional_united)
+                    if self._station_code in united_stations:
+                        discount_applied_amount = float(options.get(CONF_UNITED_DISCOUNT_AMOUNT, 0))
+                        price -= discount_applied_amount
+                        discount_provider = "United"
                 
                 # Tyre Inflation
                 github_list = set(additional_data.get("tyre_inflation", []))
@@ -446,6 +457,11 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
                 ract_stations = set(additional_data.get("ract", []) + [s.strip() for s in options.get(CONF_RACT_ADDITIONAL_STATIONS, "").split(',') if s.strip()])
                 if station_code in ract_stations:
                     discounted_price -= float(options.get(CONF_RACT_DISCOUNT_AMOUNT, 0))
+
+            if discounted_price == price and options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                united_stations = set(additional_data.get("united", []) + [s.strip() for s in options.get(CONF_UNITED_ADDITIONAL_STATIONS, "").split(',') if s.strip()])
+                if station_code in united_stations:
+                    discounted_price -= float(options.get(CONF_UNITED_DISCOUNT_AMOUNT, 0))
 
             # Check tyre inflation
             tyre_inflation_list = set(additional_data.get("tyre_inflation", []))

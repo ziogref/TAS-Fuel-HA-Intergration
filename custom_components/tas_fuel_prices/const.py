@@ -41,6 +41,7 @@ OPERATORS_URL = "https://api.github.com/repos/ziogref/TAS-Fuel-HA-Additional-Dat
 WOOLWORTHS_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/Woolworths.txt"
 COLES_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/Coles.txt"
 RACT_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/RACT.txt"
+UNITED_DISCOUNT_URL = f"{BASE_DATA_URL}Fuel-Discount/United.txt"
 TYRE_INFLATION_URL = f"{BASE_DATA_URL}Tyre-Inflation/Sites.txt"
 
 
@@ -55,6 +56,7 @@ CONF_DISCOUNT_PROVIDERS = "discount_providers"
 CONF_ENABLE_WOOLWORTHS_DISCOUNT = "enable_woolworths_discount"
 CONF_ENABLE_COLES_DISCOUNT = "enable_coles_discount"
 CONF_ENABLE_RACT_DISCOUNT = "enable_ract_discount"
+CONF_ENABLE_UNITED_DISCOUNT = "enable_united_discount"
 
 CONF_WOOLWORTHS_DISCOUNT_AMOUNT = "woolworths_discount_amount"
 CONF_WOOLWORTHS_ADDITIONAL_STATIONS = "woolworths_additional_stations"
@@ -62,6 +64,8 @@ CONF_COLES_DISCOUNT_AMOUNT = "coles_discount_amount"
 CONF_COLES_ADDITIONAL_STATIONS = "coles_additional_stations"
 CONF_RACT_DISCOUNT_AMOUNT = "ract_discount_amount"
 CONF_RACT_ADDITIONAL_STATIONS = "ract_additional_stations"
+CONF_UNITED_DISCOUNT_AMOUNT = "united_discount_amount"
+CONF_UNITED_ADDITIONAL_STATIONS = "united_additional_stations"
 
 # Tyre Inflation Configuration
 CONF_ADD_TYRE_INFLATION_STATIONS = "add_tyre_inflation_stations"

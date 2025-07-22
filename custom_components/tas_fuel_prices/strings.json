@@ -17,7 +17,8 @@
           "stations": "Favourite Stations (up to 5, comma-separated codes)",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_woolworths_discount": "Enable Woolworths Discount",
-          "enable_ract_discount": "Enable RACT Discount"
+          "enable_ract_discount": "Enable RACT Discount",
+          "enable_united_discount": "Enable United Discount (Various programs such as RSL and Seniors)"
         }
       },
       "coles_discount": {
@@ -43,6 +44,14 @@
           "ract_discount_amount": "Discount (cents)",
           "ract_additional_stations": "Additional Station Codes (comma-separated)"
         }
+      },
+      "united_discount": {
+        "title": "Configure United Discount",
+        "description": "Enter your United discount amount and any additional station codes not in the default list. To see current offers, visit:\nhttps://www.unitedpetroleum.com.au/fuel-discount-cards/\n\nTo contribute to the main station list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "united_discount_amount": "Discount (cents)",
+          "united_additional_stations": "Additional Station Codes (comma-separated)"
+        }
       }
     },
     "error": {
@@ -63,7 +72,8 @@
           "stations": "Favourite Stations (up to 5, comma-separated codes)",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_woolworths_discount": "Enable Woolworths Discount",
-          "enable_ract_discount": "Enable RACT Discount"
+          "enable_ract_discount": "Enable RACT Discount",
+          "enable_united_discount": "Enable United Discount (Various programs such as RSL and Seniors)"
         }
       },
       "coles_discount": {
@@ -88,6 +98,14 @@
         "data": {
           "ract_discount_amount": "Discount (cents)",
           "ract_additional_stations": "Additional Station Codes (comma-separated)"
+        }
+      },
+      "united_discount": {
+        "title": "Re-configure United Discount",
+        "description": "Enter your United discount amount and any additional station codes not in the default list. To see current offers, visit:\nhttps://www.unitedpetroleum.com.au/fuel-discount-cards/\n\nTo contribute to the main station list, please visit:\nhttps://github.com/ziogref/TAS-Fuel-HA-Additional-Data",
+        "data": {
+          "united_discount_amount": "Discount (cents)",
+          "united_additional_stations": "Additional Station Codes (comma-separated)"
         }
       }
     }

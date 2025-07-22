@@ -15,6 +15,7 @@ from .const import (
     COLES_DISCOUNT_URL,
     WOOLWORTHS_DISCOUNT_URL,
     RACT_DISCOUNT_URL,
+    UNITED_DISCOUNT_URL,
     TYRE_INFLATION_URL,
     DISTRIBUTOR_URL,
     OPERATORS_URL,
@@ -189,6 +190,7 @@ class TasFuelAPI:
             "coles": COLES_DISCOUNT_URL,
             "woolworths": WOOLWORTHS_DISCOUNT_URL,
             "ract": RACT_DISCOUNT_URL,
+            "united": UNITED_DISCOUNT_URL,
             "tyre_inflation": TYRE_INFLATION_URL,
         }
 

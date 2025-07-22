@@ -29,12 +29,15 @@ from .const import (
     CONF_ENABLE_WOOLWORTHS_DISCOUNT,
     CONF_ENABLE_COLES_DISCOUNT,
     CONF_ENABLE_RACT_DISCOUNT,
+    CONF_ENABLE_UNITED_DISCOUNT,
     CONF_WOOLWORTHS_DISCOUNT_AMOUNT,
     CONF_WOOLWORTHS_ADDITIONAL_STATIONS,
     CONF_COLES_DISCOUNT_AMOUNT,
     CONF_COLES_ADDITIONAL_STATIONS,
     CONF_RACT_DISCOUNT_AMOUNT,
     CONF_RACT_ADDITIONAL_STATIONS,
+    CONF_UNITED_DISCOUNT_AMOUNT,
+    CONF_UNITED_ADDITIONAL_STATIONS,
     CONF_ADD_TYRE_INFLATION_STATIONS,
     CONF_REMOVE_TYRE_INFLATION_STATIONS,
     CONF_LOCATION_ENTITY,
@@ -121,6 +124,8 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
 
             return await self.async_step_geolocation()
 
@@ -133,6 +138,7 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_ENABLE_WOOLWORTHS_DISCOUNT, default=False): bool,
                 vol.Optional(CONF_ENABLE_COLES_DISCOUNT, default=False): bool,
                 vol.Optional(CONF_ENABLE_RACT_DISCOUNT, default=False): bool,
+                vol.Optional(CONF_ENABLE_UNITED_DISCOUNT, default=False): bool,
             }
         )
         return self.async_show_form(step_id="init_options", data_schema=schema)
@@ -147,6 +153,8 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             return await self.async_step_geolocation()
 
         schema = vol.Schema({
@@ -163,6 +171,8 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             self.options.update(user_input)
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             return await self.async_step_geolocation()
 
         schema = vol.Schema({
@@ -177,6 +187,8 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle RACT discount options."""
         if user_input is not None:
             self.options.update(user_input)
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             return await self.async_step_geolocation()
 
         schema = vol.Schema({
@@ -184,6 +196,20 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_RACT_ADDITIONAL_STATIONS, default=""): str,
         })
         return self.async_show_form(step_id="ract_discount", data_schema=schema)
+
+    async def async_step_united_discount(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle United discount options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_geolocation()
+
+        schema = vol.Schema({
+            vol.Required(CONF_UNITED_DISCOUNT_AMOUNT, default=4): int,
+            vol.Optional(CONF_UNITED_ADDITIONAL_STATIONS, default=""): str,
+        })
+        return self.async_show_form(step_id="united_discount", data_schema=schema)
 
     async def async_step_geolocation(self, user_input: dict[str, Any] | None = None):
         """Handle geolocation options."""
@@ -262,6 +288,8 @@ class OptionsFlowHandler(OptionsFlow):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             
             return await self.async_step_geolocation()
 
@@ -273,6 +301,7 @@ class OptionsFlowHandler(OptionsFlow):
                 vol.Optional(CONF_ENABLE_WOOLWORTHS_DISCOUNT, default=self.options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT, False)): bool,
                 vol.Optional(CONF_ENABLE_COLES_DISCOUNT, default=self.options.get(CONF_ENABLE_COLES_DISCOUNT, False)): bool,
                 vol.Optional(CONF_ENABLE_RACT_DISCOUNT, default=self.options.get(CONF_ENABLE_RACT_DISCOUNT, False)): bool,
+                vol.Optional(CONF_ENABLE_UNITED_DISCOUNT, default=self.options.get(CONF_ENABLE_UNITED_DISCOUNT, False)): bool,
         })
         return self.async_show_form(step_id="init", data_schema=schema)
 
@@ -286,6 +315,8 @@ class OptionsFlowHandler(OptionsFlow):
                 return await self.async_step_coles_discount()
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             return await self.async_step_geolocation()
 
         schema = vol.Schema({
@@ -302,6 +333,8 @@ class OptionsFlowHandler(OptionsFlow):
             self.options.update(user_input)
             if self.options.get(CONF_ENABLE_RACT_DISCOUNT):
                 return await self.async_step_ract_discount()
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             return await self.async_step_geolocation()
 
         schema = vol.Schema({
@@ -316,6 +349,8 @@ class OptionsFlowHandler(OptionsFlow):
         """Handle RACT discount options for re-configuration."""
         if user_input is not None:
             self.options.update(user_input)
+            if self.options.get(CONF_ENABLE_UNITED_DISCOUNT):
+                return await self.async_step_united_discount()
             return await self.async_step_geolocation()
 
         schema = vol.Schema({
@@ -323,6 +358,20 @@ class OptionsFlowHandler(OptionsFlow):
             vol.Optional(CONF_RACT_ADDITIONAL_STATIONS, description={"suggested_value": self.options.get(CONF_RACT_ADDITIONAL_STATIONS, "")}): str,
         })
         return self.async_show_form(step_id="ract_discount", data_schema=schema)
+
+    async def async_step_united_discount(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle United discount options for re-configuration."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_geolocation()
+
+        schema = vol.Schema({
+            vol.Required(CONF_UNITED_DISCOUNT_AMOUNT, default=self.options.get(CONF_UNITED_DISCOUNT_AMOUNT, 4)): int,
+            vol.Optional(CONF_UNITED_ADDITIONAL_STATIONS, description={"suggested_value": self.options.get(CONF_UNITED_ADDITIONAL_STATIONS, "")}): str,
+        })
+        return self.async_show_form(step_id="united_discount", data_schema=schema)
 
     async def async_step_geolocation(self, user_input: dict[str, Any] | None = None):
         """Handle geolocation options for re-configuration."""
