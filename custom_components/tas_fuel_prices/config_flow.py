@@ -16,6 +16,8 @@ from homeassistant.helpers.selector import (
     NumberSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
+    SelectSelector,
+    SelectSelectorConfig,
 )
 
 
@@ -26,6 +28,9 @@ from .const import (
     CONF_API_SECRET,
     CONF_FUEL_TYPES,
     CONF_STATIONS,
+    CONF_PRICE_FORMAT,
+    PRICE_FORMAT_DOLLARS,
+    PRICE_FORMAT_CENTS,
     CONF_ENABLE_WOOLWORTHS_DISCOUNT,
     CONF_ENABLE_COLES_DISCOUNT,
     CONF_ENABLE_RACT_DISCOUNT,
@@ -135,6 +140,13 @@ class TasFuelConfigFlow(ConfigFlow, domain=DOMAIN):
                     FUEL_TYPES_OPTIONS
                 ),
                 vol.Optional(CONF_STATIONS, default=""): str,
+                vol.Optional(CONF_PRICE_FORMAT, default=PRICE_FORMAT_DOLLARS): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[PRICE_FORMAT_DOLLARS, PRICE_FORMAT_CENTS],
+                        translation_key="price_format_options",
+                        mode="dropdown",
+                    )
+                ),
                 vol.Optional(CONF_ENABLE_WOOLWORTHS_DISCOUNT, default=False): bool,
                 vol.Optional(CONF_ENABLE_COLES_DISCOUNT, default=False): bool,
                 vol.Optional(CONF_ENABLE_RACT_DISCOUNT, default=False): bool,
@@ -298,6 +310,13 @@ class OptionsFlowHandler(OptionsFlow):
                     FUEL_TYPES_OPTIONS
                 ),
                 vol.Optional(CONF_STATIONS, description={"suggested_value": ",".join(map(str, self.options.get(CONF_STATIONS, [])))}): str,
+                vol.Optional(CONF_PRICE_FORMAT, default=self.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[PRICE_FORMAT_DOLLARS, PRICE_FORMAT_CENTS],
+                        translation_key="price_format_options",
+                        mode="dropdown",
+                    )
+                ),
                 vol.Optional(CONF_ENABLE_WOOLWORTHS_DISCOUNT, default=self.options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT, False)): bool,
                 vol.Optional(CONF_ENABLE_COLES_DISCOUNT, default=self.options.get(CONF_ENABLE_COLES_DISCOUNT, False)): bool,
                 vol.Optional(CONF_ENABLE_RACT_DISCOUNT, default=self.options.get(CONF_ENABLE_RACT_DISCOUNT, False)): bool,
