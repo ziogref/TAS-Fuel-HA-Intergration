@@ -15,6 +15,7 @@
         "data": {
           "fuel_types": "Fuel Types",
           "stations": "Favourite Stations (up to 5, comma-separated codes)",
+          "price_format": "Price Display Format",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_woolworths_discount": "Enable Woolworths Discount",
           "enable_ract_discount": "Enable RACT Discount",
@@ -70,6 +71,7 @@
         "data": {
           "fuel_types": "Fuel Types",
           "stations": "Favourite Stations (up to 5, comma-separated codes)",
+          "price_format": "Price Display Format",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_woolworths_discount": "Enable Woolworths Discount",
           "enable_ract_discount": "Enable RACT Discount",

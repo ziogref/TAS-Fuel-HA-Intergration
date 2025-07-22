@@ -57,6 +57,9 @@ from .const import (
     CONF_RANGE,
     CONF_EXCLUDED_DISTRIBUTORS,
     CONF_EXCLUDED_OPERATORS,
+    CONF_PRICE_FORMAT,
+    PRICE_FORMAT_DOLLARS,
+    PRICE_FORMAT_CENTS,
 )
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -154,7 +157,10 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self._attr_name = f"{station_name} {fuel_type}"
         self._attr_unique_id = f"{self.coordinator.config_entry.entry_id}_{station_code}_{fuel_type}"
         self._attr_icon = "mdi:gas-station"
-        self._attr_native_unit_of_measurement = "AUD/L"
+        
+        price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
+        self._attr_native_unit_of_measurement = "c/L" if price_format == PRICE_FORMAT_CENTS else "AUD/L"
+        
         self._update_state()
 
     @property
@@ -318,8 +324,11 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 elif self._station_code in github_list and self._station_code not in remove_list:
                     tyre_inflation = True
 
-
-            self._attr_native_value = round(price / 100.0, 3)
+            price_format = options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
+            if price_format == PRICE_FORMAT_CENTS:
+                self._attr_native_value = round(price, 1)
+            else:
+                self._attr_native_value = round(price / 100.0, 3)
             
             is_favourite = self._station_code in self._favourite_stations
             
@@ -516,12 +525,13 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
 class TasFuelCheapestNearMeSummarySensor(BaseSummarySensor):
     """Representation of a summary sensor for the cheapest stations nearby."""
     _attr_icon = "mdi:map-marker-radius"
-    _attr_native_unit_of_measurement = "AUD/L"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._attr_name = f"{self._fuel_type} Cheapest Near Me"
         self._attr_unique_id = f"{self.entry.entry_id}_{self._fuel_type}_cheapest_near_me"
+        price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
+        self._attr_native_unit_of_measurement = "c/L" if price_format == PRICE_FORMAT_CENTS else "AUD/L"
 
     def _update_state(self) -> None:
         """Update the state and attributes of the summary sensor."""
@@ -548,18 +558,23 @@ class TasFuelCheapestNearMeSummarySensor(BaseSummarySensor):
         else:
             summary_list.append(cheapest_overall)
 
-        self._attr_native_value = cheapest_overall["discounted_price"]
+        price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
+        if price_format == PRICE_FORMAT_CENTS:
+            self._attr_native_value = round(cheapest_overall["discounted_price"] * 100, 1)
+        else:
+            self._attr_native_value = cheapest_overall["discounted_price"]
         self._attr_extra_state_attributes[ATTR_STATIONS] = summary_list
 
 class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
     """Representation of a summary sensor with user-defined filters."""
     _attr_icon = "mdi:filter-variant"
-    _attr_native_unit_of_measurement = "AUD/L"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._attr_name = f"{self._fuel_type} Cheapest Filtered"
         self._attr_unique_id = f"{self.entry.entry_id}_{self._fuel_type}_cheapest_filtered"
+        price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
+        self._attr_native_unit_of_measurement = "c/L" if price_format == PRICE_FORMAT_CENTS else "AUD/L"
 
     def _update_state(self) -> None:
         """Update the state and attributes of the summary sensor."""
@@ -597,7 +612,11 @@ class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
         else:
             summary_list.append(cheapest_overall)
         
-        self._attr_native_value = cheapest_overall["discounted_price"]
+        price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
+        if price_format == PRICE_FORMAT_CENTS:
+            self._attr_native_value = round(cheapest_overall["discounted_price"] * 100, 1)
+        else:
+            self._attr_native_value = cheapest_overall["discounted_price"]
         self._attr_extra_state_attributes[ATTR_STATIONS] = summary_list
 
 

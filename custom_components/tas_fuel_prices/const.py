@@ -50,6 +50,10 @@ CONF_API_KEY = "api_key"
 CONF_API_SECRET = "api_secret"
 CONF_FUEL_TYPES = "fuel_types"
 CONF_STATIONS = "stations"
+CONF_PRICE_FORMAT = "price_format"
+PRICE_FORMAT_DOLLARS = "dollars"
+PRICE_FORMAT_CENTS = "cents"
+
 
 # Discount Configuration
 CONF_DISCOUNT_PROVIDERS = "discount_providers"

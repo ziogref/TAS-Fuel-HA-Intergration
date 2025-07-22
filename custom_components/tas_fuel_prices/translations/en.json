@@ -16,6 +16,7 @@
         "data": {
           "fuel_types": "Fuel Types",
           "stations": "Favourite Stations (comma-separated codes)",
+          "price_format": "Price Display Format",
           "enable_woolworths_discount": "Enable Woolworths Discount",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_ract_discount": "Enable RACT Discount",
@@ -95,6 +96,7 @@
         "data": {
           "fuel_types": "Fuel Types",
           "stations": "Favourite Stations (comma-separated codes)",
+          "price_format": "Price Display Format",
           "enable_woolworths_discount": "Enable Woolworths Discount",
           "enable_coles_discount": "Enable Coles Discount",
           "enable_ract_discount": "Enable RACT Discount",
@@ -156,6 +158,14 @@
           "add_tyre_inflation_stations": "Add Stations with Tyre Inflation (comma-separated)",
           "remove_tyre_inflation_stations": "Remove Stations with Tyre Inflation (comma-separated)"
         }
+      }
+    }
+  },
+  "selector": {
+    "price_format_options": {
+      "options": {
+        "dollars": "Dollars (e.g. $1.234)",
+        "cents": "Cents (e.g. 123.4 c/L)"
       }
     }
   },
