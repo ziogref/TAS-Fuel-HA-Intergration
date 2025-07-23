@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from math import radians, sin, cos, sqrt, atan2
 import operator
+import re
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
@@ -71,6 +72,13 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
+def slugify(text: str) -> str:
+    """Convert a string to a slug."""
+    text = text.lower()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_-]+", "_", text).strip("_")
+    return text
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -130,7 +138,6 @@ async def async_setup_entry(
 
 class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Tasmanian Fuel Price sensor."""
-    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -149,13 +156,23 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self.additional_data_coordinator = additional_data_coordinator
         self.entry = entry
         self._station_code = station_code
+        self._station_name = station_name
         self._fuel_type = fuel_type
         self._time_zone = time_zone
         self._favourite_stations = favourite_stations
         self.hass = hass
 
+        # --- CHANGED BLOCK START ---
+        # Set the friendly name for the UI
         self._attr_name = f"{station_name} {fuel_type}"
+
+        # Set the entity_id to a predictable, clean format
+        self.entity_id = f"sensor.{DOMAIN}_{slugify(station_code)}_{slugify(fuel_type)}"
+
+        # The unique_id remains the same, ensuring entity stability
         self._attr_unique_id = f"{self.coordinator.config_entry.entry_id}_{station_code}_{fuel_type}"
+        # --- CHANGED BLOCK END ---
+        
         self._attr_icon = "mdi:gas-station"
         
         price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
