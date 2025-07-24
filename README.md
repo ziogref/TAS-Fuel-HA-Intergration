@@ -4,11 +4,13 @@ Welcome to the Tasmanian Fuel Prices integration for Home Assistant! This compon
 
 ## Screenshots
 
-<p align="center">
-  <img src="https://github.com/ziogref/TAS-Fuel-HA-Intergration/blob/main/assets/lovelace_card.png" width="270" alt="Lovelace Card View">
-  <img src="https://github.com/ziogref/TAS-Fuel-HA-Intergration/blob/main/assets/device_overview.png" width="270" alt="Devices View">
-  <img src="https://github.com/ziogref/TAS-Fuel-HA-Intergration/blob/main/assets/main_device.png" width="270" alt="Main Devices View">
-</p>
+<table align="center">
+  <tr>
+    <td valign="top"><img src="https://github.com/ziogref/TAS-Fuel-HA-Intergration/blob/main/assets/lovelace_card.png" width="270" alt="Lovelace Card View"></td>
+    <td valign="top"><img src="https://github.com/ziogref/TAS-Fuel-HA-Intergration/blob/main/assets/device_overview.png" width="270" alt="Devices View"></td>
+    <td valign="top"><img src="https://github.com/ziogref/TAS-Fuel-HA-Intergration/blob/main/assets/main_device.png" width="270" alt="Main Devices View"></td>
+  </tr>
+</table>
 
 ## Key Features
 
