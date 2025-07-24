@@ -37,32 +37,34 @@ The integration automatically keeps your data up-to-date through several refresh
 1.  **HACS**: You must have the [Home Assistant Community Store (HACS)](https://hacs.xyz/) installed.
 2.  **API Credentials**: You will need a free **API Key** and **API Secret**. The Tasmanian fuel price data is hosted on the NSW Government's API platform, so you must sign up at the [NSW API portal](https://api.nsw.gov.au/Product/Index/22) to get your credentials.
 
-## Installation & Configuration
+### Installation & Configuration
 
-### Installation
+#### Installation
+
+Once this integration is available in the default HACS repository, users can install it with the following steps:
 
 1.  Open HACS in your Home Assistant instance.
 2.  Go to **Integrations**.
-3.  Click the three dots in the top right and select **Custom repositories**.
-4.  In the "Repository" field, paste `https://github.com/ziogref/TAS-Fuel-HA-Intergration`.
-5.  For "Category", select **Integration**.
-6.  Click **Add**.
-7.  The "Tasmanian Fuel Prices" integration will now appear. Click on it and then click **Download**.
-8.  Restart Home Assistant as prompted.
+3.  Click the blue **+ EXPLORE & DOWNLOAD REPOSITORIES** button in the bottom right.
+4.  Search for "Tasmanian Fuel Prices" and click on the result.
+5.  Click the **DOWNLOAD** button and follow the on-screen instructions.
+6.  Restart Home Assistant as prompted.
 
-### Configuration
+#### Configuration
 
 1.  Navigate to **Settings** > **Devices & Services**.
 2.  Click **+ ADD INTEGRATION** and search for "Tasmanian Fuel Prices".
 3.  Enter your **API Key** and **API Secret** from the developer portal.
 4.  If the credentials are valid, you will be guided through a series of configuration steps to select fuel types, favourite stations, discount programs, and more. Follow the on-screen instructions.
 
-## What This Integration Creates
+### What This Integration Creates
 
-Once configured, the integration will create one or more **devices** under the "Tasmanian Fuel Prices" integration.
+Once configured, the integration creates the devices and entities needed to monitor fuel prices. It's important to note that a unique sensor entity is created for **every station for each fuel type you choose to monitor**. For example, if you monitor 3 fuel types, and there are 250 stations, over 750 sensor entities will be created.
 
-* A **main device** contains the control entities (like the Fuel Type Selector), diagnostic buttons/sensors, and the summary sensors.
-* A **separate device** is created for each fuel type you choose to monitor. These devices hold all the individual price sensors for every station offering that fuel.
+These entities are organized into devices to keep things manageable:
+
+* **A main device**: Named "Tasmanian Fuel Prices," this device holds the primary control entities (like the Fuel Type Selector), all diagnostic buttons and sensors, and the summary sensors for each fuel type.
+* **A separate device for each fuel type**: To make Browse easier, a dedicated device is created for each fuel type you monitor (e.g., "Tasmanian Fuel Prices - U91"). These devices contain all the individual price sensor entities for every station that sells that specific fuel.
 
 For a detailed breakdown of every entity and its attributes, please see our **[Devices and Entities Guide](DEVICES_AND_ENTITIES.md)**.
 
