@@ -24,6 +24,8 @@ ATTR_TYRE_INFLATION = "tyre_inflation"
 ATTR_IN_RANGE = "in_range"
 ATTR_DISTANCE = "distance"
 ATTR_STATIONS = "stations" # For summary sensors
+ATTR_DISTRIBUTOR_EXCLUDED = "distributor_excluded"
+ATTR_OPERATOR_EXCLUDED = "operator_excluded"
 
 
 # API Configuration

@@ -4,17 +4,17 @@
 
 This guide will show you how to create a single, powerful Lovelace card that:
 
-1.  Displays a dropdown menu (created automatically by the integration) to select the fuel type you want to view.
+1.  Displays a dropdown menu to select the fuel type you want to view.
 2.  Based on your selection, automatically populates a list of your "Favourite" fuel stations, sorted by price.
 3.  Displays a dynamic list of all other stations for the selected fuel type, also sorted by price.
-4.  Allows you to exclude specific brands from the dynamic list.
+4.  **Automatically** hides stations based on the excluded distributors and operators you set in the integration's configuration.
 5.  Automatically hides any station whose price is currently "Unknown".
 
 ---
 
 ### Part 1: Prerequisites (Custom Cards)
 
-This card requires two custom frontend components from the Home Assistant Community Store (HACS). The dropdown selector is now created automatically by the integration, so you no longer need to create a helper manually.
+This card requires two custom frontend components from the Home Assistant Community Store (HACS).
 
 1.  **Install HACS:** If you haven't already, install [HACS](https://hacs.xyz/) in your Home Assistant instance.
 2.  **Install Required Cards via HACS:**
@@ -39,7 +39,7 @@ This card requires two custom frontend components from the Home Assistant Commun
 
 ### Part 3: The YAML Code
 
-Copy the entire code block below and paste it into the Manual card editor.
+Copy the entire code block below and paste it into the Manual card editor. This new version is fully automatic and requires no manual editing of exclusion lists.
 
 ```yaml
 type: custom:vertical-stack-in-card
@@ -57,7 +57,12 @@ cards:
       template: |
         {% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}
         {% for state in states.sensor %}
-          {% if state.entity_id.endswith('_' + selected_fuel.lower()) and state.attributes.get('user_favourite') == true and state.state != 'unknown' %}
+          {% if 
+            state.entity_id.startswith('sensor.tas_fuel_prices_') and
+            state.entity_id.endswith('_' + selected_fuel.lower()) and 
+            state.attributes.get('user_favourite') == true and 
+            state.state != 'unknown' 
+          %}
             {{ state.entity_id }},
           {% endif %}
         {% endfor %}
@@ -73,22 +78,26 @@ cards:
       template: |
         {% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}
         {% for state in states.sensor %}
-          {% if state.entity_id.endswith('_' + selected_fuel.lower()) and state.attributes.get('user_favourite') == false and state.attributes.get('brand') != 'United' and state.state != 'unknown' %}
+          {% if
+            state.entity_id.startswith('sensor.tas_fuel_prices_') and
+            state.entity_id.endswith('_' + selected_fuel.lower()) and
+            state.attributes.get('user_favourite') == false and
+            state.attributes.get('distributor_excluded') == false and
+            state.attributes.get('operator_excluded') == false and
+            state.state != 'unknown'
+          %}
             {{ state.entity_id }},
           {% endif %}
         {% endfor %}
     sort:
       method: state
       numeric: true
-```
-
----
 
 ### Part 4: How This Code Works
 
-* **Top Card (Input Select):** The first card in the stack displays the `select.tasmanian_fuel_prices_fuel_type_selector` entity, which is now automatically created by the integration.
+* **Top Card (Input Select):** The first card in the stack displays the `select.tasmanian_fuel_prices_fuel_type_selector` entity, which is automatically created by the integration.
 * **Template Filtering:**
     * `{% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}`: This line gets the currently selected value from the auto-created dropdown.
-    * `state.entity_id.endswith('_' + selected_fuel.lower())`: The template now uses this `selected_fuel` variable to dynamically filter the sensors. We use `.lower()` to ensure the match works correctly even if the case is different. When you change the dropdown, the `auto-entities` card automatically re-runs the filter and updates the list.
+    * `state.entity_id.endswith('_' + selected_fuel.lower())`: The template uses this `selected_fuel` variable to dynamically filter the sensors. We use `.lower()` to ensure the match works correctly even if the case is different. When you change the dropdown, the `auto-entities` card automatically re-runs the filter and updates the list.
 
-After pasting the YAML, click "**SAVE**". You will now have a fully interactive card that allows you to switch between different fuel types without any manual setup.
+After pasting the YAML, click "**SAVE**". You will have a fully interactive card that allows you to switch between different fuel types without any manual setup.

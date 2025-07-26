@@ -39,6 +39,8 @@ from .const import (
     ATTR_IN_RANGE,
     ATTR_DISTANCE,
     ATTR_STATIONS,
+    ATTR_DISTRIBUTOR_EXCLUDED,
+    ATTR_OPERATOR_EXCLUDED,
     LOGGER,
     CONF_ENABLE_COLES_DISCOUNT,
     CONF_COLES_DISCOUNT_AMOUNT,
@@ -162,7 +164,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self._favourite_stations = favourite_stations
         self.hass = hass
 
-        # --- CHANGED BLOCK START ---
         # Set the friendly name for the UI
         self._attr_name = f"{station_name} {fuel_type}"
 
@@ -171,7 +172,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
 
         # The unique_id remains the same, ensuring entity stability
         self._attr_unique_id = f"{self.coordinator.config_entry.entry_id}_{station_code}_{fuel_type}"
-        # --- CHANGED BLOCK END ---
         
         self._attr_icon = "mdi:gas-station"
         
@@ -285,6 +285,10 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             distributor = "No data found"
             operator = "No data found"
             options = self.entry.options
+            
+            # Get user's exclusion lists from the config entry
+            excluded_distributors = set(options.get(CONF_EXCLUDED_DISTRIBUTORS, []))
+            excluded_operators = set(options.get(CONF_EXCLUDED_OPERATORS, []))
 
             # Check for and apply discounts and amenities
             if self.additional_data_coordinator.data:
@@ -386,6 +390,8 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_TYRE_INFLATION: tyre_inflation,
                 ATTR_DISTRIBUTOR: distributor,
                 ATTR_OPERATOR: operator,
+                ATTR_DISTRIBUTOR_EXCLUDED: distributor in excluded_distributors,
+                ATTR_OPERATOR_EXCLUDED: operator in excluded_operators,
             }
             # Add geolocation attributes
             attributes.update(self._calculate_distance_attributes())
