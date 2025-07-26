@@ -92,6 +92,7 @@ cards:
     sort:
       method: state
       numeric: true
+```
 
 ### Part 4: How This Code Works
 
