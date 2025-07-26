@@ -37,20 +37,27 @@ The integration automatically keeps your data up-to-date through several refresh
 1.  **HACS**: You must have the [Home Assistant Community Store (HACS)](https://hacs.xyz/) installed.
 2.  **API Credentials**: You will need a free **API Key** and **API Secret**. The Tasmanian fuel price data is hosted on the NSW Government's API platform, so you must sign up at the [NSW API portal](https://api.nsw.gov.au/Product/Index/22) to get your credentials.
 
-### Installation & Configuration
+## Installation
 
-#### Installation
+### Installation via HACS (Recommended)
 
-Once this integration is available in the default HACS repository, users can install it with the following steps:
+1.  **Add the Repository:**
+    * [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ziogref&repository=TAS-Fuel-HA-Intergration&category=integration)
+    * Or, go to HACS > Integrations > 3 dots in the top right > Custom repositories and add the URL `https://github.com/ziogref/TAS-Fuel-HA-Intergration` with the category "Integration".
+2.  **Install the Integration:**
+    * Search for "Tasmanian Fuel Prices" and click "Download".
+    * Restart Home Assistant.
 
-1.  Open HACS in your Home Assistant instance.
-2.  Go to **Integrations**.
-3.  Click the blue **+ EXPLORE & DOWNLOAD REPOSITORIES** button in the bottom right.
-4.  Search for "Tasmanian Fuel Prices" and click on the result.
-5.  Click the **DOWNLOAD** button and follow the on-screen instructions.
-6.  Restart Home Assistant as prompted.
+### Manual Installation
 
-#### Configuration
+1.  Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
+2.  If you do not have a `custom_components` directory (folder) there, you need to create it.
+3.  In the `custom_components` directory (folder) create a new folder called `tas_fuel_prices`.
+4.  Download all the files from the `custom_components/tas_fuel_prices/` directory in this repository.
+5.  Place the files you downloaded in the new directory (`tas_fuel_prices`) you created.
+6.  Restart Home Assistant.
+
+## Configuration
 
 1.  Navigate to **Settings** > **Devices & Services**.
 2.  Click **+ ADD INTEGRATION** and search for "Tasmanian Fuel Prices".
