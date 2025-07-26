@@ -91,7 +91,7 @@ cards:
         {% endfor %}
     sort:
       method: state
-      numeric: true
+      numeric: true```
 
 ### Part 4: How This Code Works
 
