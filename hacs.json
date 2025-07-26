@@ -2,6 +2,5 @@
   "name": "Tasmanian Fuel Prices",
   "country": "AU",
   "content_in_root": false,
-  "render_readme": true,
-  "domains": ["sensor"]
+  "render_readme": true
 }
