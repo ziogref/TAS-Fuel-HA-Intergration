@@ -35,6 +35,7 @@ action:
       message: >-
         The price for {{ state_attr(trigger.entity_id, 'fuel_type') }} at {{ state_attr(trigger.entity_id, 'name') }} has dropped to ${{ trigger.to_state.state }}!
 mode: single
+```
 
 ### Example 2: Daily Cheapest Fuel Report
 
@@ -68,5 +69,6 @@ action:
         Price: ${{ state_attr('sensor.u91_cheapest_filtered', 'stations')[0].discounted_price }}
         Address: {{ state_attr('sensor.u91_cheapest_filtered', 'stations')[0].address }}
 mode: single
+```
 
 These examples should provide a solid foundation for building your own custom fuel price automations.
