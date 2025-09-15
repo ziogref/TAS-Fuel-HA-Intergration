@@ -7,5 +7,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ziogref/TAS-Fuel-HA-Intergration/issues",
   "requirements": ["backoff==2.2.1"],
-  "version": "1.0.0"
+  "version": "1.0.2"
 }
