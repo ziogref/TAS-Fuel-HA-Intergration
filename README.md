@@ -43,7 +43,7 @@ The integration automatically keeps your data up-to-date through several refresh
 
 1.  **Add the Repository:**
     * [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ziogref&repository=TAS-Fuel-HA-Intergration&category=integration)
-    * Or, go to HACS > Integrations > 3 dots in the top right > Custom repositories and add the URL `https://github.com/ziogref/TAS-Fuel-HA-Intergration` with the category "Integration".
+    * Or, go to HACS and search for `Tasmanian Fuel Prices`.
 2.  **Install the Integration:**
     * Search for "Tasmanian Fuel Prices" and click "Download".
     * Restart Home Assistant.
