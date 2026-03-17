@@ -37,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=CONF_DEVICE_NAME,
         manufacturer="Custom Integration",
-        model="1.0.0",
+        model="1.0.3",
     )
 
     session = async_get_clientsession(hass)
