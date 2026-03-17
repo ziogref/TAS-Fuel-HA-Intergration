@@ -18,6 +18,7 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 
 from .api import TasFuelAPI
@@ -97,39 +98,50 @@ async def async_setup_entry(
     favourite_stations = entry.options.get(CONF_STATIONS, [])
     time_zone = ZoneInfo(hass.config.time_zone)
 
-    # --- ENTITY REGISTRY CLEANUP ---
-    # This section removes entities that are no longer configured (e.g. disabled fuel types)
+    # --- REGISTRY CLEANUP ---
     ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(hass)
+
+    # 1. Cleanup Entities
     registered_entities = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
-    
     for entity in registered_entities:
-        # We only want to clean up price sensors and summary sensors that are fuel-type specific.
-        # Diagnostic sensors (token expiry, last updated) should stay.
-        
-        # Check if this is a price sensor or summary sensor by looking at unique_id format
-        # Format: {entry_id}_{station_code}_{fuel_type} or {entry_id}_{fuel_type}_cheapest_...
-        
-        is_fuel_specific = False
         current_fuel_found = False
-        
         for ft in fuel_types:
-            # Check if the unique ID contains the fuel type as a distinct segment
-            # We use underscores to prevent matching "DL" inside "PDL"
             if f"_{ft}_" in entity.unique_id or entity.unique_id.endswith(f"_{ft}"):
                 current_fuel_found = True
                 break
         
-        # If the unique ID contains one of our patterns but not a currently active fuel type, remove it.
-        # Note: Diagnostic sensors don't follow the _{FT}_ or _{FT} pattern.
         if not current_fuel_found:
-            # Check if it looks like one of our fuel-specific unique IDs
-            # Prices: entry_id_code_FT, Summary: entry_id_FT_cheapest...
             is_price_sensor = any(entity.unique_id.endswith(f"_{ft}") for ft in ["U91", "E10", "P95", "P98", "DL", "PDL", "B20", "E85", "LPG"])
             is_summary_sensor = "_cheapest_" in entity.unique_id
             
             if is_price_sensor or is_summary_sensor:
                 LOGGER.info("Removing obsolete entity: %s", entity.entity_id)
                 ent_reg.async_remove(entity.entity_id)
+
+    # 2. Cleanup Devices
+    registered_devices = dr.async_entries_for_config_entry(dev_reg, entry.entry_id)
+    for device in registered_devices:
+        # The main device has identifier {(DOMAIN, entry_id)}
+        # Fuel type devices have identifiers {(DOMAIN, f"{entry_id}_{fuel_type}")}
+        
+        is_fuel_device = False
+        fuel_active = False
+        
+        for identifier in device.identifiers:
+            if identifier[0] == DOMAIN:
+                id_val = identifier[1]
+                # Check if it's a fuel type device (contains an underscore after the entry_id)
+                if id_val.startswith(f"{entry.entry_id}_"):
+                    is_fuel_device = True
+                    device_fuel_type = id_val.replace(f"{entry.entry_id}_", "")
+                    if device_fuel_type in fuel_types:
+                        fuel_active = True
+                    break
+        
+        if is_fuel_device and not fuel_active:
+            LOGGER.info("Removing obsolete device: %s", device.name)
+            dev_reg.async_remove_device(device.id)
     # --- END CLEANUP ---
 
     sensors: list[SensorEntity] = [
