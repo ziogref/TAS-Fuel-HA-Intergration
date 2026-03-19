@@ -1,15 +1,15 @@
 """The Tasmanian Fuel Prices integration."""
 from __future__ import annotations
 
+import random
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, Event
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change, async_call_later
 from homeassistant.helpers.dispatcher import dispatcher_send
-
 
 from .api import TasFuelAPI
 from .const import (
@@ -65,15 +65,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=ADDITIONAL_DATA_UPDATE_INTERVAL,
     )
 
+    # Coordinator for fetching trading hours (Custom scheduled below)
+    trading_hours_coordinator = DataUpdateCoordinator(
+        hass,
+        LOGGER,
+        name=f"{DOMAIN}_trading_hours",
+        update_method=api.fetch_trading_hours,
+    )
+
     # Fetch initial data
     await price_coordinator.async_config_entry_first_refresh()
     await additional_data_coordinator.async_config_entry_first_refresh()
+    await trading_hours_coordinator.async_config_entry_first_refresh()
 
     data_bundle = {
         "price_coordinator": price_coordinator,
         "additional_data_coordinator": additional_data_coordinator,
+        "trading_hours_coordinator": trading_hours_coordinator,
         "api": api,
         "location_listener_cancel": None, # To hold the listener cancel callback
+        "trading_hours_schedule_cancel": None,
+        "trading_hours_timer_cancel": None,
     }
     hass.data[DOMAIN][entry.entry_id] = data_bundle
 
@@ -81,6 +93,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Set up the location update listener
     async_setup_location_listener(hass, entry)
+
+    # Set up the randomized 4-5 AM daily Trading Hours Refresh
+    async def schedule_daily_update(now) -> None:
+        delay = random.randint(0, 3600)
+        LOGGER.debug("Scheduling trading hours update in %s seconds", delay)
+        
+        async def trigger_update(now) -> None:
+            await trading_hours_coordinator.async_request_refresh()
+            data_bundle["trading_hours_timer_cancel"] = None
+            
+        data_bundle["trading_hours_timer_cancel"] = async_call_later(hass, delay, trigger_update)
+
+    data_bundle["trading_hours_schedule_cancel"] = async_track_time_change(
+        hass, schedule_daily_update, hour=4, minute=0, second=0
+    )
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -112,11 +139,14 @@ def async_setup_location_listener(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    # Cancel the location listener if it's running
-    if (
-        data_bundle := hass.data[DOMAIN].get(entry.entry_id)
-    ) and data_bundle.get("location_listener_cancel"):
-        data_bundle["location_listener_cancel"]()
+    # Cancel any active listeners or schedules
+    if data_bundle := hass.data[DOMAIN].get(entry.entry_id):
+        if data_bundle.get("location_listener_cancel"):
+            data_bundle["location_listener_cancel"]()
+        if data_bundle.get("trading_hours_schedule_cancel"):
+            data_bundle["trading_hours_schedule_cancel"]()
+        if data_bundle.get("trading_hours_timer_cancel"):
+            data_bundle["trading_hours_timer_cancel"]()
 
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)

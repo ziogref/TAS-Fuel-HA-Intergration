@@ -179,6 +179,9 @@
       },
       "refresh_additional_data": {
         "name": "Refresh Discount & Amenity Data"
+      },
+      "refresh_trading_hours": {
+        "name": "Refresh Trading Hours"
       }
     },
     "sensor": {
@@ -190,6 +193,9 @@
       },
       "additional_data_last_updated": {
         "name": "Additional Data Last Updated"
+      },
+      "trading_hours_last_updated": {
+        "name": "Trading Hours Last Updated"
       },
       "cheapest_near_me_summary": {
         "name": "{fuel_type} Cheapest Near Me"

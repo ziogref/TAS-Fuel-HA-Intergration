@@ -21,12 +21,14 @@ async def async_setup_entry(
     data_bundle = hass.data[DOMAIN][entry.entry_id]
     price_coordinator: DataUpdateCoordinator = data_bundle["price_coordinator"]
     additional_data_coordinator: DataUpdateCoordinator = data_bundle["additional_data_coordinator"]
+    trading_hours_coordinator: DataUpdateCoordinator = data_bundle["trading_hours_coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
 
     buttons = [
         TasFuelRefreshTokenButton(price_coordinator, api_client),
         TasFuelRefreshPricesButton(price_coordinator),
         TasFuelRefreshAdditionalDataButton(price_coordinator, additional_data_coordinator),
+        TasFuelRefreshTradingHoursButton(price_coordinator, trading_hours_coordinator),
     ]
     async_add_entities(buttons)
 
@@ -55,8 +57,6 @@ class TasFuelRefreshTokenButton(ButtonEntity):
     async def async_press(self) -> None:
         """Handle the button press."""
         await self._api_client.force_refresh_token()
-        # After forcing a token refresh, we also trigger a price refresh
-        # to immediately update all sensors, including the token expiry sensor.
         await self.coordinator.async_request_refresh()
 
 
@@ -108,7 +108,32 @@ class TasFuelRefreshAdditionalDataButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        # First, refresh the community-sourced data (discounts, amenities, etc.)
         await self.additional_data_coordinator.async_request_refresh()
-        # Then, refresh the prices to make the sensors update their state immediately with the new data.
+        await self.price_coordinator.async_request_refresh()
+
+
+class TasFuelRefreshTradingHoursButton(ButtonEntity):
+    """Representation of a button to manually refresh trading hours from FuelCheck TAS."""
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, price_coordinator: DataUpdateCoordinator, trading_hours_coordinator: DataUpdateCoordinator) -> None:
+        """Initialize the button."""
+        self.price_coordinator = price_coordinator
+        self.trading_hours_coordinator = trading_hours_coordinator
+        self._attr_name = "Refresh Trading Hours"
+        self._attr_unique_id = f"{price_coordinator.config_entry.entry_id}_refresh_trading_hours"
+        self._attr_icon = "mdi:clock-time-four-outline"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this button is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.price_coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+        )
+
+    async def async_press(self) -> None:
+        """Handle the button press."""
+        await self.trading_hours_coordinator.async_request_refresh()
         await self.price_coordinator.async_request_refresh()

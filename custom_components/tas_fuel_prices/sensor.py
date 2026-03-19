@@ -43,6 +43,7 @@ from .const import (
     ATTR_STATIONS,
     ATTR_DISTRIBUTOR_EXCLUDED,
     ATTR_OPERATOR_EXCLUDED,
+    ATTR_TRADING_HOURS,
     LOGGER,
     CONF_ENABLE_COLES_DISCOUNT,
     CONF_COLES_DISCOUNT_AMOUNT,
@@ -92,6 +93,7 @@ async def async_setup_entry(
     data_bundle = hass.data[DOMAIN][entry.entry_id]
     price_coordinator: DataUpdateCoordinator = data_bundle["price_coordinator"]
     additional_data_coordinator: DataUpdateCoordinator = data_bundle["additional_data_coordinator"]
+    trading_hours_coordinator: DataUpdateCoordinator = data_bundle["trading_hours_coordinator"]
     api_client: TasFuelAPI = data_bundle["api"]
     
     fuel_types = entry.options.get(CONF_FUEL_TYPES, ["U91"])
@@ -122,16 +124,12 @@ async def async_setup_entry(
     # 2. Cleanup Devices
     registered_devices = dr.async_entries_for_config_entry(dev_reg, entry.entry_id)
     for device in registered_devices:
-        # The main device has identifier {(DOMAIN, entry_id)}
-        # Fuel type devices have identifiers {(DOMAIN, f"{entry_id}_{fuel_type}")}
-        
         is_fuel_device = False
         fuel_active = False
         
         for identifier in device.identifiers:
             if identifier[0] == DOMAIN:
                 id_val = identifier[1]
-                # Check if it's a fuel type device (contains an underscore after the entry_id)
                 if id_val.startswith(f"{entry.entry_id}_"):
                     is_fuel_device = True
                     device_fuel_type = id_val.replace(f"{entry.entry_id}_", "")
@@ -148,18 +146,19 @@ async def async_setup_entry(
         TasFuelTokenExpirySensor(price_coordinator, api_client, hass.config.time_zone),
         TasFuelPricesLastUpdatedSensor(price_coordinator),
         TasFuelAdditionalDataLastUpdatedSensor(additional_data_coordinator),
+        TasFuelTradingHoursLastUpdatedSensor(trading_hours_coordinator),
     ]
 
     # Create summary sensors for each fuel type
     for fuel_type in fuel_types:
         sensors.append(
             TasFuelCheapestNearMeSummarySensor(
-                price_coordinator, additional_data_coordinator, entry, fuel_type, hass
+                price_coordinator, additional_data_coordinator, trading_hours_coordinator, entry, fuel_type, hass
             )
         )
         sensors.append(
             TasFuelCheapestFilteredSummarySensor(
-                price_coordinator, additional_data_coordinator, entry, fuel_type, hass
+                price_coordinator, additional_data_coordinator, trading_hours_coordinator, entry, fuel_type, hass
             )
         )
 
@@ -173,6 +172,7 @@ async def async_setup_entry(
                     TasFuelPriceSensor(
                         price_coordinator=price_coordinator,
                         additional_data_coordinator=additional_data_coordinator,
+                        trading_hours_coordinator=trading_hours_coordinator,
                         entry=entry,
                         station_code=station_code,
                         station_name=station_info.get("name", f"Station {station_code}"),
@@ -193,6 +193,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self,
         price_coordinator: DataUpdateCoordinator,
         additional_data_coordinator: DataUpdateCoordinator,
+        trading_hours_coordinator: DataUpdateCoordinator,
         entry: ConfigEntry,
         station_code: str,
         station_name: str,
@@ -204,6 +205,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(price_coordinator)
         self.additional_data_coordinator = additional_data_coordinator
+        self.trading_hours_coordinator = trading_hours_coordinator
         self.entry = entry
         self._station_code = station_code
         self._station_name = station_name
@@ -212,15 +214,9 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         self._favourite_stations = favourite_stations
         self.hass = hass
 
-        # Set the friendly name for the UI
         self._attr_name = f"{station_name} {fuel_type}"
-
-        # Set the entity_id to a predictable, clean format
         self.entity_id = f"sensor.{DOMAIN}_{slugify(station_code)}_{slugify(fuel_type)}"
-
-        # The unique_id remains the same, ensuring entity stability
         self._attr_unique_id = f"{self.coordinator.config_entry.entry_id}_{station_code}_{fuel_type}"
-        
         self._attr_icon = "mdi:gas-station"
         
         price_format = self.entry.options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
@@ -242,14 +238,18 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         """Handle entity which will be added."""
         await super().async_added_to_hass()
 
-        # Listen for updates from the additional_data_coordinator to refresh attributes
         self.async_on_remove(
             self.additional_data_coordinator.async_add_listener(
                 self.async_schedule_update_ha_state, True
             )
         )
+        
+        self.async_on_remove(
+            self.trading_hours_coordinator.async_add_listener(
+                self.async_schedule_update_ha_state, True
+            )
+        )
 
-        # Listen for the signal to recalculate distance from location changes
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -275,7 +275,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
         station_info = all_stations_map.get(self._station_code)
         
         distance = None
-        is_in_range = True  # Default to True if we can't calculate
+        is_in_range = True
 
         if station_info and station_info.get("location"):
             location_state = self.hass.states.get(location_entity_id)
@@ -334,23 +334,18 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             operator = "No data found"
             options = self.entry.options
             
-            # Get user's exclusion lists from the config entry
             excluded_distributors = set(options.get(CONF_EXCLUDED_DISTRIBUTORS, []))
             excluded_operators = set(options.get(CONF_EXCLUDED_OPERATORS, []))
 
-            # Check for and apply discounts and amenities
             if self.additional_data_coordinator.data:
                 additional_data = self.additional_data_coordinator.data
 
-                # Distributor (Fuel Brand)
                 distributors_map = additional_data.get("distributors", {})
                 distributor = distributors_map.get(self._station_code, "No data found")
 
-                # Site Operator
                 operators_map = additional_data.get("operators", {})
                 operator = operators_map.get(self._station_code, "No data found")
 
-                # Discounts
                 if options.get(CONF_ENABLE_WOOLWORTHS_DISCOUNT):
                     additional_ww = [s.strip() for s in options.get(CONF_WOOLWORTHS_ADDITIONAL_STATIONS, "").split(',') if s.strip()]
                     woolworths_stations = set(additional_data.get("woolworths", []) + additional_ww)
@@ -383,7 +378,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                         price -= discount_applied_amount
                         discount_provider = "United"
                 
-                # Tyre Inflation
                 github_list = set(additional_data.get("tyre_inflation", []))
                 add_list = {s.strip() for s in options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
                 remove_list = {s.strip() for s in options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
@@ -392,6 +386,11 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                     tyre_inflation = True
                 elif self._station_code in github_list and self._station_code not in remove_list:
                     tyre_inflation = True
+
+            # Extract Trading Hours
+            trading_hours = "Hours not provided by station"
+            if self.trading_hours_coordinator.data:
+                trading_hours = self.trading_hours_coordinator.data.get(self._station_code, "Hours not provided by station")
 
             price_format = options.get(CONF_PRICE_FORMAT, PRICE_FORMAT_DOLLARS)
             if price_format == PRICE_FORMAT_CENTS:
@@ -431,6 +430,7 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
             attributes = {
                 **filtered_station_info,
                 "all_prices_at_station": cleaned_prices,
+                ATTR_TRADING_HOURS: trading_hours,
                 ATTR_LAST_UPDATED: last_updated_local_str,
                 ATTR_DISCOUNT_APPLIED: round(discount_applied_amount / 100.0, 3),
                 ATTR_DISCOUNT_PROVIDER: discount_provider,
@@ -441,7 +441,6 @@ class TasFuelPriceSensor(CoordinatorEntity, SensorEntity):
                 ATTR_DISTRIBUTOR_EXCLUDED: distributor in excluded_distributors,
                 ATTR_OPERATOR_EXCLUDED: operator in excluded_operators,
             }
-            # Add geolocation attributes
             attributes.update(self._calculate_distance_attributes())
             
             self._attr_extra_state_attributes = attributes
@@ -461,6 +460,7 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
         self,
         price_coordinator: DataUpdateCoordinator,
         additional_data_coordinator: DataUpdateCoordinator,
+        trading_hours_coordinator: DataUpdateCoordinator,
         entry: ConfigEntry,
         fuel_type: str,
         hass: HomeAssistant,
@@ -468,6 +468,7 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
         """Initialize the summary sensor."""
         super().__init__(price_coordinator)
         self.additional_data_coordinator = additional_data_coordinator
+        self.trading_hours_coordinator = trading_hours_coordinator
         self.entry = entry
         self._fuel_type = fuel_type
         self.hass = hass
@@ -486,6 +487,9 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
         await super().async_added_to_hass()
         self.async_on_remove(
             self.additional_data_coordinator.async_add_listener(self._handle_coordinator_update)
+        )
+        self.async_on_remove(
+            self.trading_hours_coordinator.async_add_listener(self._handle_coordinator_update)
         )
         self.async_on_remove(
             async_dispatcher_connect(
@@ -519,7 +523,6 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
             if not price_info or price_info.get('price') is None:
                 continue
 
-            # Calculate discounts
             price = float(price_info.get('price'))
             discounted_price = price
             
@@ -543,11 +546,14 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
                 if station_code in united_stations:
                     discounted_price -= float(options.get(CONF_UNITED_DISCOUNT_AMOUNT, 0))
 
-            # Check tyre inflation
             tyre_inflation_list = set(additional_data.get("tyre_inflation", []))
             add_list = {s.strip() for s in options.get(CONF_ADD_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
             remove_list = {s.strip() for s in options.get(CONF_REMOVE_TYRE_INFLATION_STATIONS, "").split(',') if s.strip()}
             has_tyres = station_code in add_list or (station_code in tyre_inflation_list and station_code not in remove_list)
+
+            trading_hours = "Hours not provided by station"
+            if self.trading_hours_coordinator.data:
+                trading_hours = self.trading_hours_coordinator.data.get(station_code, "Hours not provided by station")
 
             processed_stations.append({
                 "name": station_info.get("name"),
@@ -558,6 +564,7 @@ class BaseSummarySensor(CoordinatorEntity, SensorEntity):
                 "distributor": additional_data.get("distributors", {}).get(station_code, "No data found"),
                 "operator": additional_data.get("operators", {}).get(station_code, "No data found"),
                 ATTR_TYRE_INFLATION: has_tyres,
+                ATTR_TRADING_HOURS: trading_hours,
                 **self._calculate_distance_attributes(station_info),
             })
         return processed_stations
@@ -655,7 +662,6 @@ class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
         excluded_distributors = set(options.get(CONF_EXCLUDED_DISTRIBUTORS, []))
         excluded_operators = set(options.get(CONF_EXCLUDED_OPERATORS, []))
 
-        # Filter stations that are in range and not excluded by the user
         filtered_stations = [
             s for s in all_stations
             if s.get(ATTR_IN_RANGE, False) and
@@ -668,7 +674,6 @@ class TasFuelCheapestFilteredSummarySensor(BaseSummarySensor):
             self._attr_extra_state_attributes[ATTR_STATIONS] = []
             return
 
-        # Sort the filtered stations to find the cheapest
         sorted_stations = sorted(filtered_stations, key=operator.itemgetter("discounted_price"))
         
         cheapest_overall = sorted_stations[0]
@@ -769,6 +774,34 @@ class TasFuelAdditionalDataLastUpdatedSensor(CoordinatorEntity, SensorEntity):
         self.entity_id = f"sensor.{DOMAIN}_additional_data_last_updated"
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_additional_data_last_updated"
         self._attr_name = "Additional Data Last Updated"
+        self._attr_native_value = dt_util.utcnow() if coordinator.last_update_success else None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return information about the device this sensor is part of."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
+            name=CONF_DEVICE_NAME,
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._attr_native_value = dt_util.utcnow()
+        self.async_write_ha_state()
+
+class TasFuelTradingHoursLastUpdatedSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a sensor that shows the last trading hours update time."""
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: DataUpdateCoordinator) -> None:
+        """Initialize the diagnostic sensor."""
+        super().__init__(coordinator)
+        self.entity_id = f"sensor.{DOMAIN}_trading_hours_last_updated"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_trading_hours_last_updated"
+        self._attr_name = "Trading Hours Last Updated"
         self._attr_native_value = dt_util.utcnow() if coordinator.last_update_success else None
 
     @property

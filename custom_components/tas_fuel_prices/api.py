@@ -11,6 +11,7 @@ from aiohttp import ClientError, ClientSession, ClientResponseError
 from .const import (
     API_BASE_URL,
     OAUTH_URL,
+    TAS_FUELCHECK_BY_LOCATION_URL,
     LOGGER,
     COLES_DISCOUNT_URL,
     WOOLWORTHS_DISCOUNT_URL,
@@ -142,6 +143,73 @@ class TasFuelAPI:
         except Exception as err:
             LOGGER.error("Unexpected error fetching prices: %s", err)
             raise
+
+    @backoff.on_exception(backoff.expo, ClientError, max_tries=3, logger=LOGGER)
+    async def fetch_trading_hours(self) -> dict:
+        """
+        Fetch trading hours from the TAS FuelCheck website API.
+        """
+        LOGGER.info("Fetching trading hours from TAS FuelCheck API.")
+        fuel_types = ['E10', 'U91', 'E85', 'P95', 'P98', 'DL', 'PDL', 'LPG']
+        
+        params = {
+            'brands': 'SelectAll|ASTRON|Ampol|Ampol Bennetts Petroleum|Ampol Mood Food|BP|Bennetts Petroleum|Caltex|Caltex Woolworths|Coles Express|EG Ampol|Independent|Liberty|Lowes Petroleum BP|Mobil|Reddy Express|Shell|Tas Petroleum|Tas Petroleum Caltex|Tas Petroleum Shell|U-Go|United',
+            'radius': '3',
+            'bottomLeftLatitude': '-44.15938149573391',
+            'bottomLeftLongitude': '143.0586250287479',
+            'topRightLatitude': '-39.34792431693883',
+            'topRightLongitude': '149.6119697553104'
+        }
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Referer': 'https://www.fuelcheck.tas.gov.au/'
+        }
+
+        master_stations_list = {}
+        for fuel in fuel_types:
+            params['fuelType'] = fuel
+            try:
+                response = await self._session.get(
+                    TAS_FUELCHECK_BY_LOCATION_URL, 
+                    params=params, 
+                    headers=headers
+                )
+                response.raise_for_status()
+                stations = await response.json(content_type=None)
+                
+                if isinstance(stations, list):
+                    for station in stations:
+                        station_id = str(station.get('ServiceStationID'))
+                        
+                        if station_id and station_id not in master_stations_list:
+                            raw_hours = station.get('tradinghours') or []
+                            formatted_hours = {}
+                            
+                            for day_info in raw_hours:
+                                day_name = day_info.get('Day', '').capitalize()
+                                if day_info.get('IsOpen24Hours'):
+                                    hours_string = "24 Hours"
+                                elif day_info.get('IsClose'):
+                                    hours_string = "Closed"
+                                else:
+                                    start = day_info.get('StartTime', 'N/A')
+                                    end = day_info.get('EndTime', 'N/A')
+                                    hours_string = f"{start} - {end}"
+                                    
+                                formatted_hours[day_name] = hours_string
+
+                            if not formatted_hours:
+                                formatted_hours = "Hours not provided by station"
+
+                            master_stations_list[station_id] = formatted_hours
+                            
+            except Exception as e:
+                LOGGER.error("Failed to fetch trading hours for %s: %s", fuel, e)
+
+        LOGGER.debug("Successfully processed trading hours mapping.")
+        return master_stations_list
 
     async def force_refresh_token(self) -> None:
         """

@@ -26,11 +26,13 @@ ATTR_DISTANCE = "distance"
 ATTR_STATIONS = "stations" # For summary sensors
 ATTR_DISTRIBUTOR_EXCLUDED = "distributor_excluded"
 ATTR_OPERATOR_EXCLUDED = "operator_excluded"
+ATTR_TRADING_HOURS = "trading_hours"
 
 
 # API Configuration
 OAUTH_URL = "https://api.onegov.nsw.gov.au/oauth/client_credential/accesstoken"
 API_BASE_URL = "https://api.onegov.nsw.gov.au/FuelPriceCheck/v2/fuel/prices"
+TAS_FUELCHECK_BY_LOCATION_URL = "https://www.fuelcheck.tas.gov.au/fuel/api/v1/fuel/prices/bylocation"
 API_HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json; charset=utf-8",
