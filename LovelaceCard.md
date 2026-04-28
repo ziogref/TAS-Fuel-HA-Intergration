@@ -54,7 +54,8 @@ cards:
       title: '⭐ My Favourites'
       show_header_toggle: false
     filter:
-      template: |
+      template: >
+        {% set ns = namespace(items=[]) %}
         {% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}
         {% for state in states.sensor %}
           {% if 
@@ -63,9 +64,15 @@ cards:
             state.attributes.get('user_favourite') == true and 
             state.state != 'unknown' 
           %}
-            {{ state.entity_id }},
+            {% set ns.items = ns.items + [
+              {
+                "entity": state.entity_id,
+                "name": state.attributes.get('name', state.name) ~ ' ' ~ selected_fuel
+              }
+            ] %}
           {% endif %}
         {% endfor %}
+        {{ ns.items }}
     sort:
       method: state
       numeric: true
@@ -75,7 +82,8 @@ cards:
       title: '⛽ All Other Stations'
       show_header_toggle: false
     filter:
-      template: |
+      template: >
+        {% set ns = namespace(items=[]) %}
         {% set selected_fuel = states('select.tasmanian_fuel_prices_fuel_type_selector') %}
         {% for state in states.sensor %}
           {% if
@@ -86,9 +94,15 @@ cards:
             state.attributes.get('operator_excluded') == false and
             state.state != 'unknown'
           %}
-            {{ state.entity_id }},
+            {% set ns.items = ns.items + [
+              {
+                "entity": state.entity_id,
+                "name": state.attributes.get('name', state.name) ~ ' ' ~ selected_fuel
+              }
+            ] %}
           {% endif %}
         {% endfor %}
+        {{ ns.items }}
     sort:
       method: state
       numeric: true
